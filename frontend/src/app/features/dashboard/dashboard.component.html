@@ -1,0 +1,229 @@
+<div class="flex flex-col gap-6 sm:gap-8 animate-in fade-in duration-300">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 dark:from-white dark:via-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
+        {{ 'dashboard.title' | translate }}
+      </h1>
+      <p class="page-sub">
+        {{ 'dashboard.subtitle' | translate }}
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <ui-button variant="primary" size="md" (clicked)="router.navigate(['/reservations'])">
+        <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>{{ 'dashboard.newBooking' | translate }}</span>
+      </ui-button>
+
+      <ui-button variant="secondary" size="md" (clicked)="router.navigate(['/rooms'])">
+        <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+        <span>{{ 'dashboard.manageRooms' | translate }}</span>
+      </ui-button>
+    </div>
+  </div>
+
+  <!-- Stat Cards Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+    <ui-stat-card
+      [label]="'dashboard.totalRooms' | translate"
+      [value]="stats()?.totalRooms ?? 0"
+      color="primary"
+      subtitle="Inventory count"
+    >
+      <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+      </svg>
+    </ui-stat-card>
+
+    <ui-stat-card
+      [label]="'dashboard.availableRooms' | translate"
+      [value]="stats()?.availableRooms ?? 0"
+      color="emerald"
+      trend="up"
+      trendValue="Ready"
+      subtitle="Ready for check-in"
+    >
+      <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+    </ui-stat-card>
+
+    <ui-stat-card
+      [label]="'dashboard.confirmedBookings' | translate"
+      [value]="stats()?.confirmedReservations ?? 0"
+      color="indigo"
+      subtitle="Active reservations"
+    >
+      <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+      </svg>
+    </ui-stat-card>
+
+    <ui-stat-card
+      [label]="'dashboard.cancelledBookings' | translate"
+      [value]="stats()?.cancelledReservations ?? 0"
+      color="rose"
+      subtitle="Cancelled status"
+    >
+      <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+    </ui-stat-card>
+
+    <ui-stat-card
+      [label]="'dashboard.occupancyRate' | translate"
+      [value]="stats()?.occupancyPercentage ?? 0"
+      unit="%"
+      color="amber"
+      trend="up"
+      trendValue="Active"
+      subtitle="Current month"
+    >
+      <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+      </svg>
+    </ui-stat-card>
+  </div>
+
+  <!-- Content Grid: Recent Reservations & Top Rooms -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <!-- Recent Reservations (3 cols on XL) -->
+    <div class="lg:col-span-2 xl:col-span-3">
+      <ui-card
+        [title]="'dashboard.recentReservations' | translate"
+        subtitle="Live updates as guests check in and out"
+        [hasHeaderAction]="true"
+        padding="none"
+      >
+        <div slot="header-action">
+          <ui-button variant="ghost" size="xs" (clicked)="router.navigate(['/reservations'])">
+            <span>{{ 'common.viewAll' | translate }}</span>
+            <svg slot="suffix" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </ui-button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-start text-sm">
+            <thead class="data-table-head">
+              <tr>
+                <th class="data-table-cell text-start font-bold w-56">{{ 'reservations.guestName' | translate }}</th>
+                <th class="data-table-cell text-start font-bold w-44">{{ 'rooms.roomNumber' | translate }}</th>
+                <th class="data-table-cell text-start font-bold w-56">{{ 'reservations.checkInDate' | translate }}</th>
+                <th class="data-table-cell text-start font-bold w-40">{{ 'reservations.totalAmount' | translate }}</th>
+                <th class="data-table-cell text-end font-bold w-36">{{ 'common.status' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              @for (r of recentReservations(); track r.id) {
+                <tr class="data-table-row">
+                  <td class="data-table-cell font-bold text-slate-900 dark:text-white w-56">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                        {{ r.guestName[0]?.toUpperCase() }}
+                      </div>
+                      <span class="truncate">{{ r.guestName }}</span>
+                    </div>
+                  </td>
+                  <td class="data-table-cell text-slate-600 dark:text-slate-300 w-44">
+                    <span class="font-bold text-slate-900 dark:text-white">#{{ r.roomNumber }}</span>
+                    <span class="text-xs text-slate-400 ms-1">({{ r.roomType }})</span>
+                  </td>
+                  <td class="data-table-cell text-xs text-slate-500 dark:text-slate-400 w-56">
+                    <div class="font-medium text-slate-800 dark:text-slate-200">{{ r.checkInDate }}</div>
+                    <div class="text-[11px] text-slate-400">→ {{ r.checkOutDate }}</div>
+                  </td>
+                  <td class="data-table-cell font-mono font-bold text-emerald-700 dark:text-emerald-400 text-base w-40">
+                    &#36;{{ r.totalAmount | number: '1.2-2' }}
+                  </td>
+                  <td class="data-table-cell text-end w-36">
+                    <ui-badge
+                      [variant]="r.status === 'Confirmed' ? 'success' : 'danger'"
+                      [dot]="true"
+                      [pulse]="r.status === 'Confirmed'"
+                      size="sm"
+                    >
+                      {{ (r.status === 'Confirmed' ? 'reservations.confirmed' : 'reservations.cancelled') | translate }}
+                    </ui-badge>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="data-table-cell py-12 text-center text-slate-400 text-xs">
+                    {{ 'common.noData' | translate }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </ui-card>
+    </div>
+
+    <!-- Top Performing Rooms (1 col) -->
+    <div>
+      <ui-card
+        [title]="'dashboard.topRooms' | translate"
+        subtitle="Ranked by total revenue"
+        padding="sm"
+      >
+        <div class="space-y-3 mt-1">
+          @for (room of topRooms(); track room.roomNumber; let i = $index) {
+            <div class="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:border-primary-200 dark:hover:border-primary-800 transition-all group">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span
+                    class="w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0"
+                    [class.bg-amber-100]="i === 0"
+                    [class.text-amber-800]="i === 0"
+                    [class.bg-slate-200]="i === 1"
+                    [class.text-slate-700]="i === 1"
+                    [class.bg-amber-50]="i === 2"
+                    [class.text-amber-900]="i === 2"
+                    [class.bg-primary-50]="i > 2"
+                    [class.text-primary-700]="i > 2"
+                  >
+                    {{ i + 1 }}
+                  </span>
+                  <div>
+                    <h4 class="font-bold text-sm text-slate-900 dark:text-white">
+                      {{ 'rooms.roomNumber' | translate }} {{ room.roomNumber }}
+                    </h4>
+                    <p class="text-[11px] text-slate-400">{{ room.roomType }} • {{ room.reservationCount }} bookings</p>
+                  </div>
+                </div>
+                <div class="text-end font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                  &#36;{{ room.totalRevenue | number: '1.2-2' }}
+                </div>
+              </div>
+
+              <!-- Revenue sparkline bar -->
+              <div class="w-full bg-slate-200/80 dark:bg-slate-700/60 rounded-full h-1 mt-2.5 overflow-hidden">
+                <div
+                  class="h-full bg-gradient-to-r from-primary-600 to-indigo-500 rounded-full transition-all duration-500"
+                  [style.width.%]="(room.totalRevenue / maxTopRoomRevenue()) * 100"
+                ></div>
+              </div>
+            </div>
+          } @empty {
+            <div class="text-center py-8 text-xs text-slate-400">
+              {{ 'common.noData' | translate }}
+            </div>
+          }
+        </div>
+
+        <div slot="footer">
+          <ui-button variant="outline" size="sm" [fullWidth]="true" (clicked)="router.navigate(['/reports'])">
+            <span>{{ 'dashboard.viewReports' | translate }}</span>
+          </ui-button>
+        </div>
+      </ui-card>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,309 @@
+<div class="flex flex-col gap-6 sm:gap-8 animate-in fade-in duration-300">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        {{ 'reports.title' | translate }}
+      </h1>
+      <p class="page-sub">
+        {{ 'reports.subtitle' | translate }}
+      </p>
+    </div>
+
+    <!-- Tab Switcher -->
+    <div class="flex p-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-2xs select-none">
+      <button
+        type="button"
+        (click)="activeTab = 'top-rooms'"
+        class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+        [class.bg-white]="activeTab === 'top-rooms'"
+        [class.dark:bg-slate-900]="activeTab === 'top-rooms'"
+        [class.text-primary-700]="activeTab === 'top-rooms'"
+        [class.dark:text-primary-400]="activeTab === 'top-rooms'"
+        [class.shadow-xs]="activeTab === 'top-rooms'"
+        [class.text-slate-600]="activeTab !== 'top-rooms'"
+        [class.dark:text-slate-400]="activeTab !== 'top-rooms'"
+      >
+        {{ 'reports.tabTopRooms' | translate }}
+      </button>
+      <button
+        type="button"
+        (click)="activeTab = 'revenue'"
+        class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+        [class.bg-white]="activeTab === 'revenue'"
+        [class.dark:bg-slate-900]="activeTab === 'revenue'"
+        [class.text-primary-700]="activeTab === 'revenue'"
+        [class.dark:text-primary-400]="activeTab === 'revenue'"
+        [class.shadow-xs]="activeTab === 'revenue'"
+        [class.text-slate-600]="activeTab !== 'revenue'"
+        [class.dark:text-slate-400]="activeTab !== 'revenue'"
+      >
+        {{ 'reports.tabRevenue' | translate }}
+      </button>
+      <button
+        type="button"
+        (click)="activeTab = 'occupancy'"
+        class="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+        [class.bg-white]="activeTab === 'occupancy'"
+        [class.dark:bg-slate-900]="activeTab === 'occupancy'"
+        [class.text-primary-700]="activeTab === 'occupancy'"
+        [class.dark:text-primary-400]="activeTab === 'occupancy'"
+        [class.shadow-xs]="activeTab === 'occupancy'"
+        [class.text-slate-600]="activeTab !== 'occupancy'"
+        [class.dark:text-slate-400]="activeTab !== 'occupancy'"
+      >
+        {{ 'reports.tabOccupancy' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 1: Top Rooms -->
+  @if (activeTab === 'top-rooms') {
+    <ui-card
+      [title]="'reports.tabTopRooms' | translate"
+      subtitle="Top revenue generating hotel rooms ranked by bookings"
+      padding="none"
+    >
+      <div class="overflow-x-auto">
+        <table class="w-full text-start text-sm">
+          <thead class="data-table-head">
+            <tr>
+              <th class="data-table-cell text-start font-bold w-20">{{ 'reports.rank' | translate }}</th>
+              <th class="data-table-cell text-start font-bold w-56">{{ 'rooms.roomNumber' | translate }}</th>
+              <th class="data-table-cell text-start font-bold w-56">{{ 'rooms.roomType' | translate }}</th>
+              <th class="data-table-cell text-start font-bold w-56">{{ 'reports.totalBookings' | translate }}</th>
+              <th class="data-table-cell text-end font-bold">{{ 'reports.totalRevenue' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+            @for (room of topRooms(); track room.roomNumber; let i = $index) {
+              <tr class="data-table-row">
+                <td class="data-table-cell w-20">
+                  <span
+                    class="w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center border shadow-2xs"
+                    [class.bg-amber-100]="i === 0"
+                    [class.text-amber-800]="i === 0"
+                    [class.border-amber-300]="i === 0"
+                    [class.bg-slate-200]="i === 1"
+                    [class.text-slate-700]="i === 1"
+                    [class.border-slate-300]="i === 1"
+                    [class.bg-amber-50]="i === 2"
+                    [class.text-amber-900]="i === 2"
+                    [class.border-amber-200]="i === 2"
+                    [class.bg-slate-100]="i > 2"
+                    [class.text-slate-600]="i > 2"
+                    [class.border-slate-200]="i > 2"
+                  >
+                    @if (i === 0) { 🥇 }
+                    @else if (i === 1) { 🥈 }
+                    @else if (i === 2) { 🥉 }
+                    @else { #{{ i + 1 }} }
+                  </span>
+                </td>
+                <td class="data-table-cell font-bold text-slate-900 dark:text-white w-56">
+                  {{ 'rooms.roomNumber' | translate }} {{ room.roomNumber }}
+                </td>
+                <td class="data-table-cell w-56">
+                  <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50">
+                    {{ room.roomType }}
+                  </span>
+                </td>
+                <td class="data-table-cell font-medium text-slate-700 dark:text-slate-300 w-56">
+                  {{ room.reservationCount }} bookings
+                </td>
+                <td class="data-table-cell text-end font-mono font-black text-emerald-600 dark:text-emerald-400 text-base">
+                  &#36;{{ room.totalRevenue | number: '1.2-2' }}
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="data-table-cell py-12 text-center text-slate-400 text-xs">
+                  {{ 'common.noData' | translate }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </ui-card>
+  }
+
+  <!-- TAB 2: Revenue Analysis -->
+  @if (activeTab === 'revenue') {
+    <div class="flex flex-col gap-6 sm:gap-8">
+      <!-- Date Filter Form -->
+      <ui-card padding="md">
+        <div class="flex flex-wrap items-end gap-4">
+          <div class="w-full sm:w-48">
+            <ui-input
+              [label]="'common.from' | translate"
+              type="date"
+              [(value)]="revenueFrom"
+            ></ui-input>
+          </div>
+
+          <div class="w-full sm:w-48">
+            <ui-input
+              [label]="'common.to' | translate"
+              type="date"
+              [(value)]="revenueTo"
+            ></ui-input>
+          </div>
+
+          <ui-button variant="primary" size="md" (clicked)="loadRevenueReport()">
+            <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <span>{{ 'reports.generateReport' | translate }}</span>
+          </ui-button>
+        </div>
+      </ui-card>
+
+      @if (revenueReport()) {
+        <!-- Summary Stat Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <ui-stat-card
+            [label]="'reports.totalRevenue' | translate"
+            [value]="'$' + (revenueReport()?.totalRevenue ?? 0 | number: '1.2-2')"
+            color="emerald"
+            trend="up"
+            trendValue="Revenue"
+            subtitle="Selected period earnings"
+          >
+            <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </ui-stat-card>
+
+          <ui-stat-card
+            [label]="'reports.totalBookings' | translate"
+            [value]="revenueReport()?.totalReservations ?? 0"
+            color="primary"
+            subtitle="Confirmed reservations"
+          >
+            <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </ui-stat-card>
+
+          <ui-stat-card
+            [label]="'reports.totalNights' | translate"
+            [value]="revenueReport()?.totalNights ?? 0"
+            color="indigo"
+            subtitle="Room nights occupied"
+          >
+            <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+          </ui-stat-card>
+        </div>
+
+        <!-- Breakdown by Type -->
+        <ui-card [title]="'reports.revenueByRoomType' | translate" padding="none">
+          <div class="overflow-x-auto">
+            <table class="w-full text-start text-sm">
+              <thead class="data-table-head">
+                <tr>
+                  <th class="data-table-cell text-start font-bold w-64">{{ 'rooms.roomType' | translate }}</th>
+                  <th class="data-table-cell text-start font-bold w-56">{{ 'reports.totalBookings' | translate }}</th>
+                  <th class="data-table-cell text-start font-bold w-56">{{ 'reports.totalNights' | translate }}</th>
+                  <th class="data-table-cell text-end font-bold">{{ 'reports.totalRevenue' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                @for (row of revenueReport()?.byRoomType; track row.roomType) {
+                  <tr class="data-table-row">
+                    <td class="data-table-cell font-bold text-slate-900 dark:text-white w-64">{{ row.roomType }}</td>
+                    <td class="data-table-cell text-slate-600 dark:text-slate-300 w-56">{{ row.reservationCount }}</td>
+                    <td class="data-table-cell text-slate-600 dark:text-slate-300 w-56">{{ row.totalNights }}</td>
+                    <td class="data-table-cell text-end font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base">
+                      &#36;{{ row.totalRevenue | number: '1.2-2' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </ui-card>
+      }
+    </div>
+  }
+
+  <!-- TAB 3: Occupancy Rates -->
+  @if (activeTab === 'occupancy') {
+    <div class="flex flex-col gap-6 sm:gap-8">
+      <ui-card padding="md">
+        <div class="flex flex-wrap items-end gap-4">
+          <div class="w-full sm:w-48">
+            <ui-input
+              [label]="'common.from' | translate"
+              type="date"
+              [(value)]="occupancyFrom"
+            ></ui-input>
+          </div>
+
+          <div class="w-full sm:w-48">
+            <ui-input
+              [label]="'common.to' | translate"
+              type="date"
+              [(value)]="occupancyTo"
+            ></ui-input>
+          </div>
+
+          <ui-button variant="primary" size="md" (clicked)="loadOccupancyReport()">
+            <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+            <span>{{ 'reports.generateReport' | translate }}</span>
+          </ui-button>
+        </div>
+      </ui-card>
+
+      @if (occupancyReport().length > 0) {
+        <ui-card [title]="'reports.tabOccupancy' | translate" padding="none">
+          <div class="overflow-x-auto">
+            <table class="w-full text-start text-sm">
+              <thead class="data-table-head">
+                <tr>
+                  <th class="data-table-cell text-start font-bold w-48">{{ 'rooms.roomNumber' | translate }}</th>
+                  <th class="data-table-cell text-start font-bold w-56">{{ 'rooms.roomType' | translate }}</th>
+                  <th class="data-table-cell text-start font-bold w-56">{{ 'reports.bookedNights' | translate }}</th>
+                  <th class="data-table-cell text-start font-bold w-56">{{ 'reports.availableNights' | translate }}</th>
+                  <th class="data-table-cell text-end font-bold">{{ 'reports.occupancyPercentage' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                @for (row of occupancyReport(); track row.roomNumber) {
+                  <tr class="data-table-row">
+                    <td class="data-table-cell font-bold text-slate-900 dark:text-white w-48">
+                      {{ 'rooms.roomNumber' | translate }} {{ row.roomNumber }}
+                    </td>
+                    <td class="data-table-cell text-slate-600 dark:text-slate-300 w-56">{{ row.roomType }}</td>
+                    <td class="data-table-cell font-medium text-slate-800 dark:text-slate-200 w-56">{{ row.bookedNights }}</td>
+                    <td class="data-table-cell text-slate-400 w-56">{{ row.availableNights }}</td>
+                    <td class="data-table-cell text-end">
+                      <div class="flex items-center justify-end gap-3">
+                        <div class="w-32 bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+                          <div
+                            class="h-full rounded-full transition-all duration-500"
+                            [class.bg-emerald-500]="row.occupancyPercentage >= 70"
+                            [class.bg-amber-500]="row.occupancyPercentage >= 40 && row.occupancyPercentage < 70"
+                            [class.bg-rose-500]="row.occupancyPercentage < 40"
+                            [style.width.%]="row.occupancyPercentage"
+                          ></div>
+                        </div>
+                        <span class="font-bold font-mono text-sm text-slate-900 dark:text-white min-w-[45px]">
+                          {{ row.occupancyPercentage }}%
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </ui-card>
+      }
+    </div>
+  }
+</div>

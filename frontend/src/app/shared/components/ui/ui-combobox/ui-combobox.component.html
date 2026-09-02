@@ -1,0 +1,127 @@
+<div class="relative w-full" [class.opacity-60]="disabled">
+  @if (label) {
+    <label
+      class="block mb-1.5"
+      [class.text-xs]="labelStyle === 'micro'"
+      [class.font-semibold]="true"
+      [class.text-slate-600]="labelStyle === 'micro'"
+      [class.dark:text-slate-400]="labelStyle === 'micro'"
+      [class.uppercase]="labelStyle === 'micro'"
+      [class.tracking-wider]="labelStyle === 'micro'"
+      [class.text-sm]="labelStyle === 'normal'"
+      [class.text-slate-700]="labelStyle === 'normal'"
+      [class.dark:text-slate-300]="labelStyle === 'normal'"
+    >
+      {{ label }}
+      @if (required) {
+        <span class="text-rose-500 ms-0.5">*</span>
+      }
+    </label>
+  }
+
+  <div
+    class="w-full min-h-[44px] h-11 flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 text-sm cursor-pointer shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition focus-within:ring-2 focus-within:ring-primary-500/25 focus-within:border-primary-500 select-none"
+    (click)="toggleOpen()"
+    [class.ring-2]="isOpen()"
+    [class.ring-primary-500/25]="isOpen()"
+    [class.border-primary-500]="isOpen()"
+  >
+    <div class="flex-1 truncate">
+      @if (selectedOption()) {
+        <div class="flex items-center gap-2">
+          <span class="font-medium text-slate-900 dark:text-slate-100">{{ selectedOption()?.label }}</span>
+          @if (selectedOption()?.subtext) {
+            <span class="text-xs text-slate-400">{{ selectedOption()?.subtext }}</span>
+          }
+          @if (selectedOption()?.badge) {
+            <span class="ms-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              {{ selectedOption()?.badge }}
+            </span>
+          }
+        </div>
+      } @else {
+        <span class="text-slate-400 dark:text-slate-500">{{ placeholder }}</span>
+      }
+    </div>
+
+    <div class="flex items-center gap-1.5 ms-2 text-slate-400">
+      @if (allowClear && value !== null && value !== undefined && value !== '') {
+        <button
+          type="button"
+          (click)="clearSelection($event)"
+          class="p-0.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      }
+      <svg
+        class="w-4 h-4 transition-transform duration-200"
+        [class.rotate-180]="isOpen()"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Dropdown Menu -->
+  @if (isOpen()) {
+    <div
+      class="absolute z-[70] w-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-float overflow-hidden animate-slide-down"
+    >
+      @if (searchable) {
+        <div class="p-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50">
+          <div class="relative">
+            <svg class="absolute inset-y-0 start-3 my-auto w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <input
+              type="text"
+              [(ngModel)]="searchQuery"
+              (click)="$event.stopPropagation()"
+              [placeholder]="searchPlaceholder"
+              class="w-full ps-8 pe-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-slate-900 dark:text-slate-100"
+            />
+          </div>
+        </div>
+      }
+
+      <div class="max-h-60 overflow-y-auto p-1.5 space-y-0.5">
+        @for (opt of filteredOptions(); track opt.value) {
+          <div
+            class="px-3 py-2 rounded-xl text-sm flex items-center justify-between cursor-pointer border-s-2 border-transparent hover:border-primary-600 hover:bg-primary-50/70 dark:hover:bg-primary-950/40 transition-all group"
+            [class.bg-primary-50]="opt.value === value"
+            [class.border-primary-600]="opt.value === value"
+            [class.dark:bg-primary-950/40]="opt.value === value"
+            (click)="selectOption(opt)"
+          >
+            <div class="flex-1 truncate">
+              <div class="font-medium text-slate-800 dark:text-slate-200 group-hover:text-primary-700 dark:group-hover:text-primary-300">
+                {{ opt.label }}
+              </div>
+              @if (opt.subtext) {
+                <div class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{{ opt.subtext }}</div>
+              }
+            </div>
+            @if (opt.value === value) {
+              <svg class="w-4 h-4 text-primary-600 dark:text-primary-400 ms-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+              </svg>
+            }
+          </div>
+        } @empty {
+          <div class="px-4 py-6 text-center text-xs text-slate-400 flex flex-col items-center gap-1.5">
+            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <span>{{ emptyMessage }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

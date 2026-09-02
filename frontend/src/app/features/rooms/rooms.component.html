@@ -1,0 +1,246 @@
+<div class="flex flex-col gap-6 sm:gap-8 animate-in fade-in duration-300">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        {{ 'rooms.title' | translate }}
+      </h1>
+      <p class="page-sub">
+        {{ 'rooms.subtitle' | translate }}
+      </p>
+    </div>
+
+    <ui-button variant="primary" size="md" (clicked)="openCreateModal()">
+      <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+      </svg>
+      <span>{{ 'rooms.addRoom' | translate }}</span>
+    </ui-button>
+  </div>
+
+  <!-- Filters Card -->
+  <ui-card padding="md">
+    <div class="flex flex-wrap items-end gap-4">
+      <div class="w-full sm:w-60 lg:w-64">
+        <ui-combobox
+          [label]="'rooms.roomType' | translate"
+          [placeholder]="'rooms.allTypes' | translate"
+          [options]="roomTypeOptions"
+          [(value)]="filterType"
+        ></ui-combobox>
+      </div>
+
+      <div class="w-full sm:w-44">
+        <ui-input
+          [label]="'reservations.checkInDate' | translate"
+          type="date"
+          [(value)]="filterCheckIn"
+        ></ui-input>
+      </div>
+
+      <div class="w-full sm:w-44">
+        <ui-input
+          [label]="'reservations.checkOutDate' | translate"
+          type="date"
+          [(value)]="filterCheckOut"
+        ></ui-input>
+      </div>
+
+      <div class="w-full sm:w-36">
+        <ui-input
+          [label]="'rooms.maxPrice' | translate"
+          type="number"
+          [(value)]="filterMaxPrice"
+          placeholder="e.g. 200"
+        ></ui-input>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <ui-button variant="primary" size="md" (clicked)="applyFilters()">
+          <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+          </svg>
+          <span>{{ 'common.filter' | translate }}</span>
+        </ui-button>
+
+        @if (activeFilterCount > 0) {
+          <ui-badge variant="info" size="sm">
+            {{ activeFilterCount }} active
+          </ui-badge>
+        }
+
+        <ui-button variant="outline" size="md" (clicked)="resetFilters()" title="{{ 'common.reset' | translate }}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </ui-button>
+      </div>
+    </div>
+  </ui-card>
+
+  <!-- Rooms Table -->
+  <ui-card padding="none">
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm">
+        <thead class="data-table-head">
+          <tr>
+            <th class="data-table-cell text-start font-bold w-48">{{ 'rooms.roomNumber' | translate }}</th>
+            <th class="data-table-cell text-start font-bold w-56">{{ 'rooms.roomType' | translate }}</th>
+            <th class="data-table-cell text-start font-bold w-56">{{ 'rooms.pricePerNight' | translate }}</th>
+            <th class="data-table-cell text-start font-bold w-48">{{ 'rooms.availability' | translate }}</th>
+            <th class="data-table-cell text-end font-bold">{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          @for (room of filteredRooms(); track room.id) {
+            <tr class="data-table-row">
+              <td class="data-table-cell w-48">
+                <div class="flex items-center gap-3">
+                  <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-950/80 dark:to-indigo-950/80 text-primary-700 dark:text-primary-300 font-extrabold text-sm flex items-center justify-center border border-primary-200/60 dark:border-primary-800/60 shadow-2xs">
+                    {{ room.roomNumber }}
+                  </span>
+                </div>
+              </td>
+              <td class="data-table-cell w-56">
+                <ui-badge [variant]="getRoomTypeVariant(room.roomType)" size="sm">
+                  {{ room.roomType }}
+                </ui-badge>
+              </td>
+              <td class="data-table-cell w-56">
+                <span class="font-mono font-bold text-emerald-700 dark:text-emerald-400 text-base">
+                  &#36;{{ room.pricePerNight | number: '1.2-2' }}
+                </span>
+                <span class="text-xs font-normal text-slate-400 ms-1.5">{{ 'common.perNight' | translate }}</span>
+              </td>
+              <td class="data-table-cell w-48">
+                <ui-badge
+                  [variant]="room.isAvailable ? 'success' : 'neutral'"
+                  [dot]="true"
+                  [pulse]="room.isAvailable"
+                  size="sm"
+                >
+                  {{ (room.isAvailable ? 'rooms.available' : 'rooms.occupied') | translate }}
+                </ui-badge>
+              </td>
+              <td class="data-table-cell text-end">
+                <div class="inline-flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200/60 dark:border-slate-700/60 gap-0.5">
+                  <ui-button variant="ghost" size="xs" (clicked)="openEditModal(room)" title="Edit">
+                    <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </ui-button>
+                  <ui-button variant="ghost" size="xs" (clicked)="confirmDelete(room)" title="Delete">
+                    <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </ui-button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="data-table-cell py-12 text-center text-slate-400 text-xs">
+                {{ 'common.noData' | translate }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </ui-card>
+
+  <!-- Create / Edit Room Modal -->
+  <ui-modal
+    [isOpen]="isModalOpen"
+    [title]="(editingRoomId ? 'rooms.editRoom' : 'rooms.addRoom') | translate"
+    subtitle="Configure room specifications, pricing, and initial availability"
+    size="md"
+    (closed)="closeModal()"
+  >
+    <form (ngSubmit)="saveRoom()" class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <ui-input
+          [label]="'rooms.roomNumber' | translate"
+          labelStyle="normal"
+          [(value)]="modalRoomNumber"
+          [required]="true"
+          placeholder="101"
+        ></ui-input>
+
+        <ui-input
+          [label]="'rooms.pricePerNight' | translate"
+          labelStyle="normal"
+          type="number"
+          [(value)]="modalPrice"
+          [required]="true"
+          min="1"
+          step="0.01"
+        ></ui-input>
+      </div>
+
+      <ui-combobox
+        [label]="'rooms.roomType' | translate"
+        labelStyle="normal"
+        [options]="roomTypeOptions"
+        [(value)]="modalRoomType"
+        [required]="true"
+        [allowClear]="false"
+      ></ui-combobox>
+
+      <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between">
+        <div>
+          <label for="roomAvailable" class="text-sm font-semibold text-slate-800 dark:text-slate-200 block cursor-pointer">
+            {{ 'rooms.available' | translate }}
+          </label>
+          <p class="text-xs text-slate-400 mt-0.5">Toggle whether this room can be booked immediately</p>
+        </div>
+        <input
+          type="checkbox"
+          id="roomAvailable"
+          [(ngModel)]="modalIsAvailable"
+          name="modalIsAvailable"
+          class="w-5 h-5 text-primary-600 rounded-lg border-slate-300 focus:ring-primary-500 cursor-pointer"
+        />
+      </div>
+    </form>
+
+    <div slot="footer">
+      <ui-button variant="secondary" (clicked)="closeModal()">
+        {{ 'common.cancel' | translate }}
+      </ui-button>
+      <ui-button variant="primary" (clicked)="saveRoom()" [loading]="saving()">
+        {{ 'common.save' | translate }}
+      </ui-button>
+    </div>
+  </ui-modal>
+
+  <!-- Delete Room Confirmation Modal -->
+  <ui-modal
+    [isOpen]="isDeleteModalOpen"
+    [title]="'rooms.deleteRoom' | translate"
+    size="sm"
+    (closed)="closeDeleteModal()"
+  >
+    <div class="space-y-3">
+      <p class="text-sm text-slate-600 dark:text-slate-300">
+        {{ 'rooms.deletePrompt' | translate }}
+        <span class="font-bold text-slate-900 dark:text-white">#{{ roomToDelete?.roomNumber }}</span>?
+      </p>
+      <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+        <svg class="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        <span>{{ 'rooms.deleteWarning' | translate }}</span>
+      </div>
+    </div>
+
+    <div slot="footer">
+      <ui-button variant="secondary" (clicked)="closeDeleteModal()">
+        {{ 'common.cancel' | translate }}
+      </ui-button>
+      <ui-button variant="danger" (clicked)="executeDelete()" [loading]="deleting()">
+        {{ 'common.delete' | translate }}
+      </ui-button>
+    </div>
+  </ui-modal>
+</div>

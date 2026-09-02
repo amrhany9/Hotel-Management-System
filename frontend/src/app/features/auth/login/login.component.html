@@ -1,0 +1,96 @@
+<div class="min-h-[80vh] flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
+  <!-- Language Switcher in Auth View -->
+  <div class="absolute top-6 end-6">
+    <button
+      type="button"
+      (click)="translationService.toggleLanguage()"
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm transition"
+    >
+      <svg class="w-3.5 h-3.5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+      </svg>
+      <span>{{ translationService.currentLang() === 'en' ? 'العربية' : 'English' }}</span>
+    </button>
+  </div>
+
+  <div class="max-w-md w-full">
+    <!-- Logo & Header -->
+    <div class="text-center mb-8">
+      <div class="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary-700 via-primary-600 to-indigo-500 items-center justify-center text-white shadow-xl shadow-primary-500/20 mb-4 transform hover:scale-105 transition-transform duration-300">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+        {{ 'auth.signInTitle' | translate }}
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
+        {{ 'auth.signInSubtitle' | translate }}
+      </p>
+    </div>
+
+    <ui-card padding="lg">
+      <form (ngSubmit)="onSubmit()" class="space-y-4">
+        <ui-input
+          [label]="'auth.email' | translate"
+          type="email"
+          [(value)]="email"
+          [required]="true"
+          [hasPrefix]="true"
+          placeholder="admin@hotel.local"
+        >
+          <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
+          </svg>
+        </ui-input>
+
+        <ui-input
+          [label]="'auth.password' | translate"
+          type="password"
+          [(value)]="password"
+          [required]="true"
+          [hasPrefix]="true"
+          placeholder="••••••••"
+        >
+          <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+        </ui-input>
+
+        <div class="pt-2">
+          <ui-button
+            type="submit"
+            variant="primary"
+            [fullWidth]="true"
+            [loading]="loading()"
+          >
+            {{ (loading() ? 'auth.signingIn' : 'auth.signInBtn') | translate }}
+          </ui-button>
+        </div>
+      </form>
+
+      <!-- Quick Demo Shortcut Button -->
+      <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <ui-button
+          type="button"
+          variant="secondary"
+          size="sm"
+          [fullWidth]="true"
+          (clicked)="fillAdminDemo()"
+        >
+          <svg slot="prefix" class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+          <span>{{ 'auth.quickDemo' | translate }}</span>
+        </ui-button>
+      </div>
+
+      <div slot="footer" class="text-center py-2 text-xs text-slate-500">
+        <span>{{ 'auth.noAccount' | translate }}</span>
+        <a routerLink="/register" class="font-semibold text-primary-600 hover:text-primary-500 ms-1.5 transition">
+          {{ 'auth.createAccount' | translate }}
+        </a>
+      </div>
+    </ui-card>
+  </div>
+</div>

@@ -1,0 +1,49 @@
+<div
+  class="relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-card transition-all duration-200 overflow-hidden"
+  [class.hover:shadow-card-hover]="interactive"
+  [class.hover:border-slate-300]="interactive"
+  [class.dark:hover:border-slate-700]="interactive"
+  [class.hover:-translate-y-0.5]="interactive"
+  [class.cursor-pointer]="interactive"
+>
+  @if (accentColor) {
+    <div
+      class="h-1 w-full"
+      [class.bg-gradient-to-r]="true"
+      [class.from-primary-600]="accentColor === 'primary'"
+      [class.to-indigo-500]="accentColor === 'primary'"
+      [class.from-emerald-500]="accentColor === 'emerald'"
+      [class.to-teal-400]="accentColor === 'emerald'"
+      [class.from-amber-500]="accentColor === 'amber'"
+      [class.to-yellow-400]="accentColor === 'amber'"
+      [class.from-rose-500]="accentColor === 'rose'"
+      [class.to-pink-500]="accentColor === 'rose'"
+    ></div>
+  }
+
+  @if (title || hasHeaderAction) {
+    <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
+      <div>
+        @if (title) {
+          <h3 class="font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight">
+            {{ title }}
+          </h3>
+        }
+        @if (subtitle) {
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ subtitle }}</p>
+        }
+      </div>
+      <div class="flex items-center gap-2">
+        <ng-content select="[slot=header-action]"></ng-content>
+      </div>
+    </div>
+  }
+
+  <div [class]="bodyClasses">
+    <ng-content></ng-content>
+  </div>
+
+  <div class="empty:hidden border-t border-slate-100 dark:border-slate-800 px-6 py-3.5 bg-slate-50/40 dark:bg-slate-850/40">
+    <ng-content select="[slot=footer]"></ng-content>
+  </div>
+</div>

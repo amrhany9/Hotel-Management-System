@@ -1,0 +1,66 @@
+<div class="w-full">
+  @if (label) {
+    <label
+      class="block mb-1.5"
+      [class.text-xs]="labelStyle === 'micro'"
+      [class.font-semibold]="true"
+      [class.text-slate-600]="labelStyle === 'micro'"
+      [class.dark:text-slate-400]="labelStyle === 'micro'"
+      [class.uppercase]="labelStyle === 'micro'"
+      [class.tracking-wider]="labelStyle === 'micro'"
+      [class.text-sm]="labelStyle === 'normal'"
+      [class.text-slate-700]="labelStyle === 'normal'"
+      [class.dark:text-slate-300]="labelStyle === 'normal'"
+    >
+      {{ label }}
+      @if (required) {
+        <span class="text-rose-500 ms-0.5">*</span>
+      }
+    </label>
+  }
+
+  <div class="relative flex items-center group">
+    @if (hasPrefix) {
+      <div class="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary-600 transition-colors">
+        <ng-content select="[slot=prefix]"></ng-content>
+      </div>
+    }
+
+    <input
+      [type]="type"
+      [placeholder]="placeholder"
+      [disabled]="disabled"
+      [min]="min"
+      [max]="max"
+      [step]="step"
+      [ngModel]="value"
+      (ngModelChange)="onModelChange($event)"
+      class="w-full min-h-[44px] h-11 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/25 focus:border-primary-500 transition shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+      [class.ps-10]="hasPrefix"
+      [class.pe-10]="hasSuffix"
+      [class.px-3.5]="!hasPrefix && !hasSuffix"
+      [class.ps-3.5]="!hasPrefix && hasSuffix"
+      [class.pe-3.5]="hasPrefix && !hasSuffix"
+      [class.border-rose-400]="error"
+      [class.dark:border-rose-600]="error"
+      [class.focus:ring-rose-500]="error"
+    />
+
+    @if (hasSuffix) {
+      <div class="absolute inset-y-0 end-0 pe-3.5 flex items-center text-slate-400 group-focus-within:text-primary-600 transition-colors">
+        <ng-content select="[slot=suffix]"></ng-content>
+      </div>
+    }
+  </div>
+
+  @if (error) {
+    <p class="text-xs text-rose-500 mt-1.5 flex items-center gap-1.5">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+      </svg>
+      {{ error }}
+    </p>
+  } @else if (hint) {
+    <p class="text-xs text-slate-400 mt-1">{{ hint }}</p>
+  }
+</div>
