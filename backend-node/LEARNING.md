@@ -548,7 +548,153 @@ A practical lesson from your machine: the Node SQL Server driver connects **only
 
 ---
 
-## 15. Teacher's notes: what idiomatic Node code looks like
+## 15. The NestJS lifecycle: how execution actually flows
+
+There are three lifecycles to understand: **loading** (when files are imported), **bootstrap and shutdown** (once per process) and the **request pipeline** (once per HTTP request). The order below was checked against the NestJS source in `node_modules/@nestjs/core/nest-application.js`.
+
+### 15.1 Phase 0: loading the code (decorators run at import time)
+
+`node dist/main.js` starts by importing files. When a class definition is evaluated, **its decorators run immediately** and store metadata on the class:
+
+```ts
+@Controller('reservations')
+export class ReservationsController {
+  constructor(private readonly mediator: IMediator) {}
+}
+```
+
+At import time this records "this class is a controller for `/reservations`" and, thanks to `emitDecoratorMetadata`, "its constructor needs an `IMediator`". Nothing is instantiated yet. It is the same idea as C# attributes, with one difference: in .NET, reflection reads types whenever it likes, while in TypeScript **only what decorators wrote down exists at runtime**.
+
+### 15.2 Phase 1: bootstrap (once per process)
+
+```text
+main.ts
+ │
+ ├─ loadEnvironment()                      validate .env/env vars with zod → AppConfig (or exit 1)
+ │
+ ├─ NestFactory.create(AppModule)
+ │   ├─ 1. Scan the module graph           AppModule → AppConfig, Infrastructure, Application, Api, Hubs ...
+ │   └─ 2. Create every provider           resolve constructor dependencies, deepest first
+ │        ├─ APP_CONFIG                    useFactory → loadEnvironment() (cached)
+ │        ├─ TypeORM DataSource            connect to the database + run migrations
+ │        ├─ repositories, UnitOfWork, JwtTokenGenerator, ...
+ │        ├─ command/query handlers, ValidationBehavior, Mediator
+ │        └─ controllers                   (one instance each: singletons)
+ │
+ ├─ configureApp(app)                      global filter, /api prefix, CORS, global pipe
+ ├─ setupSwagger(app)                      only when swagger.enabled
+ │
+ └─ app.listen(5001)  →  app.init()
+      ├─ 3. Register the body parser       express.json()
+      ├─ 4. Register middleware + routes   "Mapped {/api/rooms, GET} route" log lines
+      ├─ 5. onModuleInit()                 on every provider that implements it
+      ├─ 6. onApplicationBootstrap()       HotelDbSeeder seeds the DB; ReservationHub attaches the WebSocket listener
+      ├─    "Nest application successfully started"
+      └─ 7. HTTP server starts listening   "Hotel Management API listening on ..."
+```
+
+| .NET `Program.cs` | NestJS |
+| :--- | :--- |
+| `builder.Services.Add...()` | Step 1: modules declare providers |
+| `builder.Build()` | Step 2: but Nest **creates all singletons now**, not lazily |
+| `app.UseCors()`, `app.UseMiddleware<>()` | `configureApp()` + step 4 |
+| `using (var scope = ...) { Migrate(); Seed(); }` | Migration in step 2 (TypeORM `migrationsRun`), seeding in step 6 |
+| `IHostedService.StartAsync` | `onApplicationBootstrap()` |
+| `app.Run()` | Step 7 |
+
+**The most important difference: lifetimes.** In ASP.NET, controllers are created **per request**, and `AddScoped` services live for one request. In Nest, controllers and providers are **singletons by default**: their constructor runs **once at bootstrap** and the same object serves every request. Never store per-request data in a field (`this.currentUser = ...`), because two requests running at the same time would overwrite each other. Per-request data lives in `AsyncLocalStorage` (section 8.3) or in the request object. (Nest does have `Scope.REQUEST`, but it re-creates the whole dependency chain on every request and is rarely worth it.)
+
+### 15.3 Phase 2: one HTTP request, step by step
+
+Example: `POST /api/reservations` with a JSON body and a Bearer token.
+
+```text
+ Node event loop: HTTP server emits 'request'
+ │
+ ▼
+ 1. Express middleware ─────── CORS check (enableCors) → JSON body parser fills req.body
+ │
+ ▼
+ 2. Nest router ────────────── POST /api/reservations → ReservationsController.create
+ │
+ ▼
+ 3. Guards ─────────────────── JwtAuthenticationGuard.canActivate()
+ │                               @AllowAnonymous? (read via Reflector) → no → verify JWT → req.user
+ │                               invalid → UnauthorizedException ──────────────────────────┐
+ ▼                                                                                          │
+ 4. Interceptors (before) ──── RequestContextInterceptor: AsyncLocalStorage.run({ user })   │
+ │                               └─ subscribes to next.handle() INSIDE the context          │
+ ▼                                                                                          │
+ 5. Pipes ──────────────────── ModelBindingPipe (global): body → CreateReservationCommand   │
+ │                               parameter pipes: IdParameterPipe, OptionalDateOnlyPipe ...  │
+ ▼                                                                                          │
+ 6. Route handler ──────────── controller.create(command)                                   │
+ │                               → mediator.send(command)                                   │
+ │                                 → ValidationBehavior → 400 if invalid ──────────────────►│
+ │                                 → CommandBus → CreateReservationCommandHandler.execute() │
+ │                                     → ICurrentUserService.userId (reads AsyncLocalStorage)│
+ │                                     → unitOfWork.executeTransaction(...)                 │
+ │                                         → lock room, overlap check, INSERTs, COMMIT      │
+ │                                     → SignalR broadcast (after commit)                   │
+ │                                 ← ReservationDto                                         │
+ ▼                                                                                          │
+ 7. Interceptors (after) ───── the returned value flows back through the Observable        │
+ │                               (where you would map, time or cache responses)             │
+ ▼                                                                                          ▼
+ 8. Response ───────────────── Nest serializes the DTO to JSON (201 for POST)   ExceptionHandlingFilter
+                                                                               → { status, title, detail }
+```
+
+The official order, checked in the source:
+
+| # | Stage | Scope order | In this project |
+| :--- | :--- | :--- | :--- |
+| 1 | Middleware | global, then module | CORS, body parser |
+| 2 | Guards | global → controller → route | `JwtAuthenticationGuard` (global `APP_GUARD`) |
+| 3 | Interceptors (before) | global → controller → route | `RequestContextInterceptor` (global `APP_INTERCEPTOR`) |
+| 4 | Pipes | global → controller → route → parameter | `ModelBindingPipe`, then the parameter pipes |
+| 5 | Handler | – | controller method → Mediator → command/query handler |
+| 6 | Interceptors (after) | **reverse** order: route → controller → global | pass-through |
+| 7 | Exception filters | route → controller → **global** (first match wins) | `ExceptionHandlingFilter` |
+
+Three details that surprise people:
+
+* **Pipes run inside the interceptor.** Nest calls the pipes from within the function behind `next.handle()`. That is why the model-binding pipes and the handler both see the `AsyncLocalStorage` context created by the interceptor.
+* **Guards run before interceptors.** A guard cannot use anything an interceptor prepares; that is why the guard puts the user on `req.user` and the interceptor then copies it into the request context.
+* **Filters catch errors from every stage**: a guard's `UnauthorizedException`, a pipe's binding error, a validator's `ValidationException`, or a handler's `ConflictException`. That is why all errors leave with the same JSON shape.
+
+The **WebSocket connection is the exception**: `ReservationHub` listens to the raw Node `upgrade` event, which **bypasses the whole pipeline** (no guards, interceptors or filters). That is why the hub validates the JWT itself. Only the `negotiate` request goes through the normal pipeline.
+
+### 15.4 How many requests run "at the same time" on one thread?
+
+Each `await` (a database query, password hashing on the worker pool, a network call) **hands the thread back to the event loop**, which continues with other requests' pipelines. Three bookings can be in progress at once: one waiting for SQL Server, one hashing a password, one being serialized. They never run JavaScript in parallel, but their waiting overlaps.
+
+That is exactly why `AsyncLocalStorage` exists: when request A resumes after its `await`, Node restores **A's** context, not B's. So `currentUser.userId` and `unitOfWork.manager` always belong to the right request, even though all the services are shared singletons.
+
+### 15.5 Phase 3: shutdown (Ctrl+C, `docker stop`, a Kubernetes rollout)
+
+`app.enableShutdownHooks()` makes Nest listen for `SIGINT`/`SIGTERM`, then run (checked in `nest-application-context.js`):
+
+```text
+SIGTERM
+ ├─ 1. onModuleDestroy()
+ ├─ 2. beforeApplicationShutdown(signal)
+ ├─ 3. dispose: the HTTP server stops accepting connections
+ └─ 4. onApplicationShutdown(signal)   ReservationHub closes WebSockets (clients reconnect elsewhere);
+                                       TypeORM closes the connection pool
+```
+
+This is **graceful shutdown**: during a deployment, the old instance finishes cleanly instead of cutting connections. In production, orchestrators send `SIGTERM` and wait (30 seconds by default in Kubernetes) before killing the process.
+
+### 15.6 Try it yourself
+
+1. Add `onModuleInit() { console.log('RoomRepository ready'); }` to `RoomRepository`, then start the app: you will see it printed once, after the "dependencies initialized" logs and before the seeder runs.
+2. Add a `console.log` to the constructor of `RoomsController`: it prints **once at startup**, not on every request (the singleton lesson).
+3. Write a `TimingInterceptor` that records `Date.now()` before `next.handle()` and logs the duration in `tap(...)` after it. Register it with `APP_INTERCEPTOR` to see the before/after phases (step 3 vs step 6).
+
+---
+
+## 16. Teacher's notes: what idiomatic Node code looks like
 
 This project deliberately mirrors your .NET solution so you can compare the two side by side. When you join a Node team, you will meet some conventions that differ from what is here. Know both:
 
@@ -575,7 +721,7 @@ Things in this project that are idiomatic everywhere: kebab-case file names with
 
 ---
 
-## 16. Exercises to go further
+## 17. Exercises to go further
 
 1. **Add a query end to end**: `GetRoomReservationsQuery` + handler + a `GET /api/rooms/:id/reservations` action. You will touch the Application interface, the Infrastructure repository and the API controller, the full Clean Architecture flow.
 2. **Add a pipeline behavior**: write a `LoggingBehavior` that logs each request name and duration, and register it in `PIPELINE_BEHAVIORS` before `ValidationBehavior`.
