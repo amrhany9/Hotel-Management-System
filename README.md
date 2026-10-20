@@ -58,6 +58,9 @@ The backend follows a clean, decoupled CQRS and Repository architecture with Med
 │   ├── HotelManagement.API/             # Controllers, SignalR Hubs, Middleware, launchSettings.json
 │   └── HotelManagement.Tests/           # xUnit Automated Unit Tests for critical business rules
 │
+├── backend-node/                        # Alternative Node.js / NestJS backend: same API and the same Domain /
+│                                        # Application / Infrastructure / API layering (see backend-node/README.md)
+│
 └── frontend/                            # Standalone Angular 20 SPA
     ├── src/app/core/                    # AuthService, AuthGuard, AuthInterceptor, SignalRService, ApiServices
     ├── src/app/features/
@@ -110,6 +113,19 @@ dotnet run --project HotelManagement.API/HotelManagement.API.csproj --launch-pro
 
 The API will start listening at: `http://localhost:5001`.
 Swagger UI documentation is available at: `http://localhost:5001/swagger`.
+
+### Alternative to Step 3: Run the Node.js (NestJS) Backend
+
+`backend-node/` is a drop-in replacement for the ASP.NET Core API: same routes, port, JWT settings and SignalR events. Run one backend or the other, not both.
+
+```powershell
+cd backend-node
+npm install
+copy .env.example .env   # DB_TYPE=sqlite for zero setup, or DB_TYPE=mssql (requires TCP/IP enabled on SQL Server)
+npm run start:dev
+```
+
+See [backend-node/README.md](backend-node/README.md) for configuration and tests.
 
 ### Step 4: Run the Angular Frontend
 
