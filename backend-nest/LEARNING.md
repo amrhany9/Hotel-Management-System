@@ -1,6 +1,6 @@
 # What You Learned Building the Node.js Backend
 
-A guided tour of the Node.js, TypeScript and NestJS concepts used in `backend-node`, explained from the point of view of the ASP.NET Core backend you already know. The Node project follows the **same Clean Architecture layout** (Domain → Application → Infrastructure → API), so you can open a .NET file and its Node counterpart side by side. Every section links to the code where the concept is used.
+A guided tour of the Node.js, TypeScript and NestJS concepts used in `backend-nest`, explained from the point of view of the ASP.NET Core backend you already know. The Node project follows the **same Clean Architecture layout** (Domain → Application → Infrastructure → API), so you can open a .NET file and its Node counterpart side by side. Every section links to the code where the concept is used.
 
 ---
 

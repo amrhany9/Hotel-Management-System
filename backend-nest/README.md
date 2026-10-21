@@ -14,7 +14,7 @@ It is a drop-in replacement: same routes, same JSON shapes, same error format, s
 ## Quick start
 
 ```powershell
-cd backend-node
+cd backend-nest
 npm install
 copy .env.example .env      # local development settings (DB_TYPE=sqlite needs no setup)
 npm run start:dev
@@ -115,7 +115,7 @@ Alternatively, keep dynamic ports, start the **SQL Server Browser** service and 
 The layout mirrors the .NET Clean Architecture solution folder by folder:
 
 ```text
-backend-node/
+backend-nest/
 ├── src/
 │   ├── main.ts                         # Program.cs: create app, Swagger, listen
 │   ├── app.module.ts                   # Wires Config, Infrastructure, Application and Api
