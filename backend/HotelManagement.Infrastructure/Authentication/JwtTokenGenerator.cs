@@ -19,10 +19,15 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public string GenerateToken(User user)
     {
-        var secret = _configuration["Jwt:Key"] ?? "super_secret_hotel_management_jwt_key_2026_dotnet8!";
+        var secret = _configuration["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            throw new InvalidOperationException("Jwt:Key is not configured.");
+        }
+
         var issuer = _configuration["Jwt:Issuer"] ?? "HotelManagementApi";
         var audience = _configuration["Jwt:Audience"] ?? "HotelManagementApp";
-        var expiryInMinutes = double.TryParse(_configuration["Jwt:ExpiryMinutes"], out var exp) ? exp : 1440; // 24 hours
+        var expiryInMinutes = double.TryParse(_configuration["Jwt:ExpiryMinutes"], out var exp) ? exp : 720;
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -34,6 +39,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.Name, user.FullName),
+            new(ClaimTypes.Role, user.Role.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
