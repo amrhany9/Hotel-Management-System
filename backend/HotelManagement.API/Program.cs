@@ -3,26 +3,33 @@ using HotelManagement.API.Hubs;
 using HotelManagement.API.Middleware;
 using HotelManagement.Application;
 using HotelManagement.Application.Common.Interfaces;
+using HotelManagement.Application.Common.Settings;
 using HotelManagement.Infrastructure;
 using HotelManagement.Infrastructure.Persistence;
 using HotelManagement.Infrastructure.Persistence.Seed;
+using HotelManagement.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Add Application & Infrastructure services
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// 2. Add SignalR
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ISignalRNotificationService, SignalRNotificationService>();
 
-// 3. Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "super_secret_hotel_management_jwt_key_2026_dotnet8!_must_be_long_enough";
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key must be configured and at least 32 bytes long. Set it with 'dotnet user-secrets' locally or the Jwt__Key environment variable in production.");
+}
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HotelManagementApi";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HotelManagementApp";
 
@@ -46,7 +53,6 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 
-    // Configure JWT authentication for SignalR WebSockets
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -62,9 +68,9 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// 4. Configure CORS for Angular client
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? new[] { "http://localhost:4200" };
+builder.Services.AddAuthorization();
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 
 builder.Services.AddCors(options =>
 {
@@ -77,9 +83,16 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddControllers();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
-// 5. Configure Swagger / OpenAPI
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -117,10 +130,9 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// 6. Global error handling middleware
+app.UseForwardedHeaders();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// Configure HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -137,29 +149,36 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ReservationHub>("/hubs/reservations");
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
-// 7. Auto-apply migrations and seed data on startup
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
-    try
-    {
-        var dbContext = services.GetRequiredService<HotelDbContext>();
-        if (dbContext.Database.IsRelational())
-        {
-            logger.LogInformation("Applying pending EF Core migrations...");
-            await dbContext.Database.MigrateAsync();
-        }
+    var dbContext = services.GetRequiredService<HotelDbContext>();
 
-        var passwordHasher = services.GetRequiredService<IPasswordHasherService>();
-        await HotelDbSeeder.SeedAsync(dbContext, passwordHasher, logger);
-        logger.LogInformation("Database initialized and verified successfully.");
-    }
-    catch (Exception ex)
+    if (dbContext.Database.IsRelational())
     {
-        logger.LogWarning(ex, "Database migration/seed skipped or failed. Ensure database server is available.");
+        logger.LogInformation("Applying pending EF Core migrations...");
+        await dbContext.Database.MigrateAsync();
     }
+
+    var passwordHasher = services.GetRequiredService<IPasswordHasherService>();
+    var clock = services.GetRequiredService<IClock>();
+    var demo = services.GetRequiredService<IOptions<DemoSettings>>().Value;
+
+    if (demo.Enabled)
+    {
+        await DemoResetService.ResetNowAsync(services.GetRequiredService<IServiceScopeFactory>(), logger);
+    }
+    else
+    {
+        await HotelDbSeeder.SeedAsync(dbContext, passwordHasher, clock, logger);
+    }
+
+    logger.LogInformation("Database initialized and verified successfully.");
 }
 
 app.Run();
+
+public partial class Program;

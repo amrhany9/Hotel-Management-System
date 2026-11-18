@@ -1,6 +1,7 @@
 using System.Reflection;
 using FluentValidation;
 using HotelManagement.Application.Common.Behaviors;
+using HotelManagement.Application.Common.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +14,7 @@ public static class DependencyInjection
         var assembly = Assembly.GetExecutingAssembly();
 
         services.AddValidatorsFromAssembly(assembly);
+        services.AddScoped<ReservationChangeRecorder>();
 
         services.AddMediatR(cfg =>
         {

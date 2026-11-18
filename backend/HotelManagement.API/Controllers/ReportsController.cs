@@ -23,34 +23,32 @@ public class ReportsController : ControllerBase
         [FromQuery] int take = 5,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetTopRoomsReportQuery(take), cancellationToken);
-        return Ok(result);
+        return Ok(await _mediator.Send(new GetTopRoomsReportQuery(take), cancellationToken));
     }
 
     [HttpGet("revenue")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<RevenueReportDto>> GetRevenue(
         [FromQuery] DateOnly from,
         [FromQuery] DateOnly to,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetRevenueReportQuery(from, to), cancellationToken);
-        return Ok(result);
+        return Ok(await _mediator.Send(new GetRevenueReportQuery(from, to), cancellationToken));
     }
 
     [HttpGet("occupancy")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<List<OccupancyReportItemDto>>> GetOccupancy(
         [FromQuery] DateOnly from,
         [FromQuery] DateOnly to,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetOccupancyReportQuery(from, to), cancellationToken);
-        return Ok(result);
+        return Ok(await _mediator.Send(new GetOccupancyReportQuery(from, to), cancellationToken));
     }
 
     [HttpGet("dashboard")]
     public async Task<ActionResult<DashboardStatsDto>> GetDashboardStats(CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetDashboardStatsQuery(), cancellationToken);
-        return Ok(result);
+        return Ok(await _mediator.Send(new GetDashboardStatsQuery(), cancellationToken));
     }
 }

@@ -10,16 +10,16 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
     {
         builder.HasKey(res => res.Id);
 
-        builder.Property(res => res.GuestName)
-            .IsRequired()
-            .HasMaxLength(100);
-
         builder.Property(res => res.CheckInDate)
             .HasColumnType("date")
             .IsRequired();
 
         builder.Property(res => res.CheckOutDate)
             .HasColumnType("date")
+            .IsRequired();
+
+        builder.Property(res => res.NightlyRate)
+            .HasColumnType("decimal(18,2)")
             .IsRequired();
 
         builder.Property(res => res.TotalAmount)
@@ -31,12 +31,27 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
             .HasMaxLength(20)
             .IsRequired();
 
+        builder.Property(res => res.Notes)
+            .HasMaxLength(500);
+
         builder.Property(res => res.CreatedAt)
             .IsRequired();
+
+        builder.Ignore(res => res.Nights);
+        builder.Ignore(res => res.AmountPaid);
+        builder.Ignore(res => res.Balance);
+
+        builder.HasIndex(res => new { res.RoomId, res.CheckInDate, res.CheckOutDate });
+        builder.HasIndex(res => res.Status);
 
         builder.HasOne(res => res.Room)
             .WithMany(r => r.Reservations)
             .HasForeignKey(res => res.RoomId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(res => res.Guest)
+            .WithMany(g => g.Reservations)
+            .HasForeignKey(res => res.GuestId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(res => res.User)

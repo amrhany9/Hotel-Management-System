@@ -30,16 +30,16 @@ public class SignalRNotificationService : ISignalRNotificationService
         }
     }
 
-    public async Task NotifyReservationCancelled(int reservationId)
+    public async Task NotifyReservationUpdated(ReservationDto reservation, string action)
     {
         try
         {
-            _logger.LogInformation("Broadcasting reservationCancelled event for ID: {Id}", reservationId);
-            await _hubContext.Clients.All.SendAsync("reservationCancelled", reservationId);
+            _logger.LogInformation("Broadcasting reservationUpdated ({Action}) event for ID: {Id}", action, reservation.Id);
+            await _hubContext.Clients.All.SendAsync("reservationUpdated", new { action, reservation });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to broadcast reservationCancelled event");
+            _logger.LogError(ex, "Failed to broadcast reservationUpdated event");
         }
     }
 

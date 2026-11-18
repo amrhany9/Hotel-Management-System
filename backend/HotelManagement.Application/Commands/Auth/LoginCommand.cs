@@ -46,7 +46,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             Token = token,
             UserId = user.Id,
             FullName = user.FullName,
-            Email = user.Email
+            Email = user.Email,
+            Role = user.Role.ToString()
         };
     }
 }

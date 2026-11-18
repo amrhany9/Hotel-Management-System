@@ -1,4 +1,5 @@
 using HotelManagement.Application.Common.Interfaces.Repositories;
+using HotelManagement.Application.Common.Mappings;
 using HotelManagement.Application.DTOs;
 using HotelManagement.Domain.Enums;
 using MediatR;
@@ -6,7 +7,7 @@ using MediatR;
 namespace HotelManagement.Application.Queries.Reservations;
 
 public record GetReservationsQuery(
-    string? GuestName = null,
+    string? Guest = null,
     string? RoomNumber = null,
     DateOnly? CheckInDate = null,
     DateOnly? CheckOutDate = null,
@@ -31,28 +32,13 @@ public class GetReservationsQueryHandler : IRequestHandler<GetReservationsQuery,
         }
 
         var list = await _reservationRepository.SearchAsync(
-            request.GuestName,
+            request.Guest,
             request.RoomNumber,
             request.CheckInDate,
             request.CheckOutDate,
             parsedStatus,
             cancellationToken);
 
-        return list.Select(r => new ReservationDto
-        {
-            Id = r.Id,
-            RoomId = r.RoomId,
-            RoomNumber = r.Room?.RoomNumber ?? string.Empty,
-            RoomType = r.Room?.RoomType ?? string.Empty,
-            GuestName = r.GuestName,
-            CheckInDate = r.CheckInDate,
-            CheckOutDate = r.CheckOutDate,
-            Nights = r.CheckOutDate.DayNumber - r.CheckInDate.DayNumber,
-            TotalAmount = r.TotalAmount,
-            Status = r.Status.ToString(),
-            CreatedBy = r.CreatedBy,
-            CreatedByName = r.User?.FullName ?? $"User #{r.CreatedBy}",
-            CreatedAt = r.CreatedAt
-        }).ToList();
+        return list.Select(ReservationMapper.ToDto).ToList();
     }
 }

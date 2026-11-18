@@ -1,3 +1,5 @@
+using HotelManagement.Domain.Enums;
+
 namespace HotelManagement.Domain.Entities;
 
 public class User
@@ -6,6 +8,7 @@ public class User
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
+    public UserRole Role { get; set; } = UserRole.FrontDesk;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

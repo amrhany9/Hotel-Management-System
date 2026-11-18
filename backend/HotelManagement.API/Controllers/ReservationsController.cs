@@ -1,6 +1,7 @@
 using HotelManagement.Application.Commands.Reservations;
 using HotelManagement.Application.DTOs;
 using HotelManagement.Application.Queries.Reservations;
+using HotelManagement.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,23 +22,21 @@ public class ReservationsController : ControllerBase
 
     [HttpGet]
     public async Task<ActionResult<List<ReservationDto>>> GetAll(
-        [FromQuery] string? guestName,
+        [FromQuery] string? guest,
         [FromQuery] string? roomNumber,
         [FromQuery] DateOnly? checkInDate,
         [FromQuery] DateOnly? checkOutDate,
         [FromQuery] string? status,
         CancellationToken cancellationToken)
     {
-        var query = new GetReservationsQuery(guestName, roomNumber, checkInDate, checkOutDate, status);
-        var result = await _mediator.Send(query, cancellationToken);
-        return Ok(result);
+        var query = new GetReservationsQuery(guest, roomNumber, checkInDate, checkOutDate, status);
+        return Ok(await _mediator.Send(query, cancellationToken));
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<ReservationDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ReservationDetailDto>> GetById(int id, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetReservationByIdQuery(id), cancellationToken);
-        return Ok(result);
+        return Ok(await _mediator.Send(new GetReservationByIdQuery(id), cancellationToken));
     }
 
     [HttpPost]
@@ -50,9 +49,38 @@ public class ReservationsController : ControllerBase
     }
 
     [HttpPost("{id:int}/cancel")]
-    public async Task<ActionResult<ReservationDto>> Cancel(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ReservationDetailDto>> Cancel(int id, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new CancelReservationCommand(id), cancellationToken);
-        return Ok(result);
+        return Ok(await _mediator.Send(new CancelReservationCommand(id), cancellationToken));
+    }
+
+    [HttpPost("{id:int}/check-in")]
+    public async Task<ActionResult<ReservationDetailDto>> CheckIn(int id, CancellationToken cancellationToken)
+    {
+        return Ok(await _mediator.Send(new CheckInReservationCommand(id), cancellationToken));
+    }
+
+    [HttpPost("{id:int}/check-out")]
+    public async Task<ActionResult<ReservationDetailDto>> CheckOut(int id, CancellationToken cancellationToken)
+    {
+        return Ok(await _mediator.Send(new CheckOutReservationCommand(id), cancellationToken));
+    }
+
+    [HttpPost("{id:int}/no-show")]
+    public async Task<ActionResult<ReservationDetailDto>> NoShow(int id, CancellationToken cancellationToken)
+    {
+        return Ok(await _mediator.Send(new MarkNoShowCommand(id), cancellationToken));
+    }
+
+    [HttpPost("{id:int}/payments")]
+    public async Task<ActionResult<ReservationDetailDto>> RecordPayment(
+        int id,
+        [FromBody] RecordPaymentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new RecordPaymentCommand(id, request.Amount, request.Method, request.Reference);
+        return Ok(await _mediator.Send(command, cancellationToken));
     }
 }
+
+public record RecordPaymentRequest(decimal Amount, PaymentMethod Method, string? Reference);

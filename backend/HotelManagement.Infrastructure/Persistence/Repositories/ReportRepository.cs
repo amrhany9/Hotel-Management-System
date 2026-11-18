@@ -1,5 +1,7 @@
+using HotelManagement.Application.Common.Interfaces;
 using HotelManagement.Application.Common.Interfaces.Repositories;
 using HotelManagement.Application.DTOs;
+using HotelManagement.Domain.Entities;
 using HotelManagement.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,11 +10,18 @@ namespace HotelManagement.Infrastructure.Persistence.Repositories;
 public class ReportRepository : IReportRepository
 {
     private readonly HotelDbContext _context;
+    private readonly IClock _clock;
 
-    public ReportRepository(HotelDbContext context)
+    public ReportRepository(HotelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
+
+    private IQueryable<Reservation> Stays => _context.Reservations.Where(r =>
+        r.Status == ReservationStatus.Confirmed ||
+        r.Status == ReservationStatus.CheckedIn ||
+        r.Status == ReservationStatus.CheckedOut);
 
     public async Task<List<TopRoomReportDto>> GetTopRoomsAsync(int take, CancellationToken cancellationToken = default)
     {
@@ -24,9 +33,15 @@ public class ReportRepository : IReportRepository
             {
                 room.RoomNumber,
                 room.RoomType,
-                ReservationCount = room.Reservations.Count(res => res.Status != ReservationStatus.Cancelled),
+                ReservationCount = room.Reservations.Count(res =>
+                    res.Status == ReservationStatus.Confirmed ||
+                    res.Status == ReservationStatus.CheckedIn ||
+                    res.Status == ReservationStatus.CheckedOut),
                 TotalRevenue = room.Reservations
-                    .Where(res => res.Status != ReservationStatus.Cancelled)
+                    .Where(res =>
+                        res.Status == ReservationStatus.Confirmed ||
+                        res.Status == ReservationStatus.CheckedIn ||
+                        res.Status == ReservationStatus.CheckedOut)
                     .Sum(res => (decimal?)res.TotalAmount) ?? 0m
             })
             .OrderByDescending(x => x.ReservationCount)
@@ -44,12 +59,10 @@ public class ReportRepository : IReportRepository
 
     public async Task<RevenueReportDto> GetRevenueReportAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
     {
-        var reservations = await _context.Reservations
+        var reservations = await Stays
             .Include(r => r.Room)
             .AsNoTracking()
-            .Where(r => r.Status != ReservationStatus.Cancelled &&
-                        r.CheckInDate < to &&
-                        r.CheckOutDate > from)
+            .Where(r => r.CheckInDate < to && r.CheckOutDate > from)
             .ToListAsync(cancellationToken);
 
         var grouped = reservations
@@ -58,20 +71,8 @@ public class ReportRepository : IReportRepository
             {
                 RoomType = g.Key,
                 ReservationCount = g.Count(),
-                TotalNights = g.Sum(r =>
-                {
-                    var start = r.CheckInDate > from ? r.CheckInDate : from;
-                    var end = r.CheckOutDate < to ? r.CheckOutDate : to;
-                    return Math.Max(0, end.DayNumber - start.DayNumber);
-                }),
-                TotalRevenue = g.Sum(r =>
-                {
-                    var fullNights = Math.Max(1, r.CheckOutDate.DayNumber - r.CheckInDate.DayNumber);
-                    var start = r.CheckInDate > from ? r.CheckInDate : from;
-                    var end = r.CheckOutDate < to ? r.CheckOutDate : to;
-                    var nightsInRange = Math.Max(0, end.DayNumber - start.DayNumber);
-                    return (r.TotalAmount / fullNights) * nightsInRange;
-                })
+                TotalNights = g.Sum(r => NightsInRange(r, from, to)),
+                TotalRevenue = g.Sum(r => r.NightlyRate * NightsInRange(r, from, to))
             })
             .OrderBy(x => x.RoomType)
             .ToList();
@@ -91,7 +92,9 @@ public class ReportRepository : IReportRepository
 
         var rooms = await _context.Rooms
             .Include(r => r.Reservations.Where(res =>
-                res.Status != ReservationStatus.Cancelled &&
+                (res.Status == ReservationStatus.Confirmed ||
+                 res.Status == ReservationStatus.CheckedIn ||
+                 res.Status == ReservationStatus.CheckedOut) &&
                 res.CheckInDate < to &&
                 res.CheckOutDate > from))
             .AsNoTracking()
@@ -100,15 +103,7 @@ public class ReportRepository : IReportRepository
 
         return rooms.Select(room =>
         {
-            int bookedNights = 0;
-            foreach (var res in room.Reservations)
-            {
-                var start = res.CheckInDate > from ? res.CheckInDate : from;
-                var end = res.CheckOutDate < to ? res.CheckOutDate : to;
-                bookedNights += Math.Max(0, end.DayNumber - start.DayNumber);
-            }
-
-            bookedNights = Math.Min(bookedNights, availableNightsInRange);
+            int bookedNights = Math.Min(room.Reservations.Sum(res => NightsInRange(res, from, to)), availableNightsInRange);
 
             double occupancy = availableNightsInRange > 0
                 ? Math.Round(((double)bookedNights / availableNightsInRange) * 100.0, 1)
@@ -127,36 +122,40 @@ public class ReportRepository : IReportRepository
 
     public async Task<DashboardStatsDto> GetDashboardStatsAsync(CancellationToken cancellationToken = default)
     {
+        var today = _clock.Today;
+        var monthStart = new DateOnly(today.Year, today.Month, 1);
+        var monthEnd = monthStart.AddMonths(1);
+        var daysInMonth = monthEnd.DayNumber - monthStart.DayNumber;
+        var monthStartUtc = monthStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var monthEndUtc = monthEnd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
         var totalRooms = await _context.Rooms.CountAsync(cancellationToken);
         var availableRooms = await _context.Rooms.CountAsync(r => r.IsAvailable, cancellationToken);
         var confirmed = await _context.Reservations.CountAsync(r => r.Status == ReservationStatus.Confirmed, cancellationToken);
         var cancelled = await _context.Reservations.CountAsync(r => r.Status == ReservationStatus.Cancelled, cancellationToken);
+        var arrivals = await _context.Reservations.CountAsync(r => r.Status == ReservationStatus.Confirmed && r.CheckInDate == today, cancellationToken);
+        var departures = await _context.Reservations.CountAsync(r => r.Status == ReservationStatus.CheckedIn && r.CheckOutDate <= today, cancellationToken);
+        var inHouse = await _context.Reservations.CountAsync(r => r.Status == ReservationStatus.CheckedIn, cancellationToken);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var monthStart = new DateOnly(today.Year, today.Month, 1);
-        var monthEnd = monthStart.AddMonths(1);
-        var daysInMonth = monthEnd.DayNumber - monthStart.DayNumber;
+        var inHouseTotals = await _context.Reservations
+            .Where(r => r.Status == ReservationStatus.CheckedIn)
+            .Select(r => new { r.TotalAmount, Paid = r.Payments.Sum(p => (decimal?)p.Amount) ?? 0m })
+            .ToListAsync(cancellationToken);
+
+        var paymentsThisMonth = await _context.Payments
+            .Where(p => p.PaidAt >= monthStartUtc && p.PaidAt < monthEndUtc)
+            .SumAsync(p => (decimal?)p.Amount, cancellationToken) ?? 0m;
 
         double occupancyRate = 0.0;
         if (totalRooms > 0 && daysInMonth > 0)
         {
-            var totalAvailableRoomNights = totalRooms * daysInMonth;
-            var activeRes = await _context.Reservations
+            var activeRes = await Stays
                 .AsNoTracking()
-                .Where(r => r.Status == ReservationStatus.Confirmed &&
-                            r.CheckInDate < monthEnd &&
-                            r.CheckOutDate > monthStart)
+                .Where(r => r.CheckInDate < monthEnd && r.CheckOutDate > monthStart)
                 .ToListAsync(cancellationToken);
 
-            int bookedNights = 0;
-            foreach (var r in activeRes)
-            {
-                var s = r.CheckInDate > monthStart ? r.CheckInDate : monthStart;
-                var e = r.CheckOutDate < monthEnd ? r.CheckOutDate : monthEnd;
-                bookedNights += Math.Max(0, e.DayNumber - s.DayNumber);
-            }
-
-            occupancyRate = Math.Round(((double)bookedNights / totalAvailableRoomNights) * 100.0, 1);
+            int bookedNights = activeRes.Sum(r => NightsInRange(r, monthStart, monthEnd));
+            occupancyRate = Math.Round(((double)bookedNights / (totalRooms * daysInMonth)) * 100.0, 1);
         }
 
         return new DashboardStatsDto
@@ -165,7 +164,19 @@ public class ReportRepository : IReportRepository
             AvailableRooms = availableRooms,
             ConfirmedReservations = confirmed,
             CancelledReservations = cancelled,
-            OccupancyPercentage = occupancyRate
+            OccupancyPercentage = occupancyRate,
+            ArrivalsToday = arrivals,
+            DeparturesToday = departures,
+            InHouse = inHouse,
+            OutstandingBalance = inHouseTotals.Sum(x => x.TotalAmount - x.Paid),
+            PaymentsThisMonth = paymentsThisMonth
         };
+    }
+
+    private static int NightsInRange(Reservation r, DateOnly from, DateOnly to)
+    {
+        var start = r.CheckInDate > from ? r.CheckInDate : from;
+        var end = r.CheckOutDate < to ? r.CheckOutDate : to;
+        return Math.Max(0, end.DayNumber - start.DayNumber);
     }
 }

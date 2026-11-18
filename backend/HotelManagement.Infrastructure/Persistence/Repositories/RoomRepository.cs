@@ -81,7 +81,7 @@ public class RoomRepository : IRoomRepository
 
             // Half-open interval overlap logic: existing.CheckInDate < requestedCheckOutDate && existing.CheckOutDate > requestedCheckInDate
             query = query.Where(r => !r.Reservations.Any(res =>
-                res.Status != ReservationStatus.Cancelled &&
+                (res.Status == ReservationStatus.Confirmed || res.Status == ReservationStatus.CheckedIn) &&
                 res.CheckInDate < outDate &&
                 res.CheckOutDate > inDate));
         }

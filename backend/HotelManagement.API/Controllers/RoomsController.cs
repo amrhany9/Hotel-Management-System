@@ -48,6 +48,7 @@ public class RoomsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<RoomDto>> Create(
         [FromBody] CreateRoomCommand command,
         CancellationToken cancellationToken)
@@ -57,6 +58,7 @@ public class RoomsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<RoomDto>> Update(
         int id,
         [FromBody] UpdateRoomCommand command,
@@ -72,6 +74,7 @@ public class RoomsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _mediator.Send(new DeleteRoomCommand(id), cancellationToken);

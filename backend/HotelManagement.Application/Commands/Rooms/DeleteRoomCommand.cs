@@ -44,12 +44,13 @@ public class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand, Unit>
         }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var hasFutureConfirmed = room.Reservations.Any(r =>
-            r.Status == ReservationStatus.Confirmed && r.CheckOutDate >= today);
+        var hasActiveStay = room.Reservations.Any(r =>
+            (r.Status == ReservationStatus.Confirmed && r.CheckOutDate >= today) ||
+            r.Status == ReservationStatus.CheckedIn);
 
-        if (hasFutureConfirmed)
+        if (hasActiveStay)
         {
-            throw new ConflictException("Cannot delete room with active or future confirmed reservations.");
+            throw new ConflictException("Cannot delete a room with a guest in-house or upcoming confirmed reservations.");
         }
 
         var roomNumber = room.RoomNumber;
