@@ -1,168 +1,76 @@
 using HotelManagement.Application.Commands.Reservations;
 using HotelManagement.Application.Common.Exceptions;
-using HotelManagement.Application.Common.Interfaces;
-using HotelManagement.Domain.Entities;
 using HotelManagement.Domain.Enums;
 using HotelManagement.Infrastructure.Persistence.Repositories;
 using HotelManagement.Tests.Common;
-using Moq;
-using Xunit;
+using Microsoft.EntityFrameworkCore;
 
 namespace HotelManagement.Tests.Reservations;
 
 public class ReservationOverlapTests
 {
-    private readonly Mock<ICurrentUserService> _mockCurrentUser;
-    private readonly Mock<ISignalRNotificationService> _mockSignalR;
+    private static readonly DateOnly Today = new(2026, 9, 1);
 
-    public ReservationOverlapTests()
-    {
-        _mockCurrentUser = new Mock<ICurrentUserService>();
-        _mockCurrentUser.Setup(u => u.UserId).Returns(1);
-        _mockCurrentUser.Setup(u => u.IsAuthenticated).Returns(true);
+    private static CreateReservationCommandHandler Handler(TestHotel hotel) => new(
+        new RoomRepository(hotel.Context),
+        new ReservationRepository(hotel.Context),
+        new GuestRepository(hotel.Context),
+        new UserRepository(hotel.Context),
+        new AuditLogRepository(hotel.Context),
+        new UnitOfWork(hotel.Context),
+        hotel.CurrentUser.Object,
+        hotel.SignalR.Object,
+        hotel.Clock);
 
-        _mockSignalR = new Mock<ISignalRNotificationService>();
-    }
+    private static CreateReservationCommand Command(DateOnly checkIn, DateOnly checkOut, string phone = "+20 111 222 3333", string name = "New Guest") =>
+        new(1, name, phone, null, null, checkIn, checkOut, null);
 
     [Fact]
     public async Task CreateReservation_WhenDatesOverlapExistingConfirmed_ThrowsConflictException()
     {
-        // Arrange
-        var context = TestDbContextFactory.Create(Guid.NewGuid().ToString());
-        var user = new User { Id = 1, FullName = "Admin User", Email = "admin@hotel.local", PasswordHash = "hash" };
-        var room = new Room { Id = 1, RoomNumber = "101", RoomType = "Single", PricePerNight = 100m, IsAvailable = true };
-        var existing = new Reservation
-        {
-            Id = 1,
-            RoomId = 1,
-            GuestName = "Existing Guest",
-            CheckInDate = new DateOnly(2026, 9, 1),
-            CheckOutDate = new DateOnly(2026, 9, 5),
-            TotalAmount = 400m,
-            Status = ReservationStatus.Confirmed,
-            CreatedBy = 1
-        };
+        var hotel = new TestHotel(Today);
+        hotel.AddReservation(new DateOnly(2026, 9, 1), 4, ReservationStatus.Confirmed);
 
-        context.Users.Add(user);
-        context.Rooms.Add(room);
-        context.Reservations.Add(existing);
-        await context.SaveChangesAsync();
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            Handler(hotel).Handle(Command(new DateOnly(2026, 9, 4), new DateOnly(2026, 9, 10)), CancellationToken.None));
+    }
 
-        var handler = new CreateReservationCommandHandler(
-            new RoomRepository(context),
-            new ReservationRepository(context),
-            new UserRepository(context),
-            new AuditLogRepository(context),
-            new UnitOfWork(context),
-            _mockCurrentUser.Object,
-            _mockSignalR.Object);
+    [Fact]
+    public async Task CreateReservation_WhenDatesOverlapGuestInHouse_ThrowsConflictException()
+    {
+        var hotel = new TestHotel(Today);
+        hotel.AddReservation(new DateOnly(2026, 8, 30), 5, ReservationStatus.CheckedIn);
 
-        var command = new CreateReservationCommand(
-            RoomId: 1,
-            GuestName: "New Guest",
-            CheckInDate: new DateOnly(2026, 9, 4),
-            CheckOutDate: new DateOnly(2026, 9, 10)
-        );
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() => handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            Handler(hotel).Handle(Command(new DateOnly(2026, 9, 2), new DateOnly(2026, 9, 6)), CancellationToken.None));
     }
 
     [Fact]
     public async Task CreateReservation_WhenDatesAreAdjacent_SucceedsAndCalculatesTotal()
     {
-        // Arrange
-        var context = TestDbContextFactory.Create(Guid.NewGuid().ToString());
-        var user = new User { Id = 1, FullName = "Admin User", Email = "admin@hotel.local", PasswordHash = "hash" };
-        var room = new Room { Id = 1, RoomNumber = "101", RoomType = "Single", PricePerNight = 100m, IsAvailable = true };
-        var existing = new Reservation
-        {
-            Id = 1,
-            RoomId = 1,
-            GuestName = "Existing Guest",
-            CheckInDate = new DateOnly(2026, 9, 1),
-            CheckOutDate = new DateOnly(2026, 9, 5),
-            TotalAmount = 400m,
-            Status = ReservationStatus.Confirmed,
-            CreatedBy = 1
-        };
+        var hotel = new TestHotel(Today);
+        hotel.AddReservation(new DateOnly(2026, 9, 1), 4, ReservationStatus.Confirmed);
 
-        context.Users.Add(user);
-        context.Rooms.Add(room);
-        context.Reservations.Add(existing);
-        await context.SaveChangesAsync();
+        var result = await Handler(hotel).Handle(Command(new DateOnly(2026, 9, 5), new DateOnly(2026, 9, 10)), CancellationToken.None);
 
-        var handler = new CreateReservationCommandHandler(
-            new RoomRepository(context),
-            new ReservationRepository(context),
-            new UserRepository(context),
-            new AuditLogRepository(context),
-            new UnitOfWork(context),
-            _mockCurrentUser.Object,
-            _mockSignalR.Object);
-
-        var command = new CreateReservationCommand(
-            RoomId: 1,
-            GuestName: "New Guest",
-            CheckInDate: new DateOnly(2026, 9, 5),
-            CheckOutDate: new DateOnly(2026, 9, 10)
-        );
-
-        // Act
-        var result = await handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        Assert.NotNull(result);
         Assert.Equal(5, result.Nights);
+        Assert.Equal(100m, result.NightlyRate);
         Assert.Equal(500m, result.TotalAmount);
+        Assert.Equal(500m, result.Balance);
         Assert.Equal("Confirmed", result.Status);
     }
 
-    [Fact]
-    public async Task CreateReservation_WhenExistingReservationIsCancelled_DoesNotBlock()
+    [Theory]
+    [InlineData(ReservationStatus.Cancelled)]
+    [InlineData(ReservationStatus.NoShow)]
+    [InlineData(ReservationStatus.CheckedOut)]
+    public async Task CreateReservation_WhenExistingReservationNoLongerHoldsTheRoom_DoesNotBlock(ReservationStatus status)
     {
-        // Arrange
-        var context = TestDbContextFactory.Create(Guid.NewGuid().ToString());
-        var user = new User { Id = 1, FullName = "Admin User", Email = "admin@hotel.local", PasswordHash = "hash" };
-        var room = new Room { Id = 1, RoomNumber = "101", RoomType = "Single", PricePerNight = 100m, IsAvailable = true };
-        var cancelled = new Reservation
-        {
-            Id = 1,
-            RoomId = 1,
-            GuestName = "Cancelled Guest",
-            CheckInDate = new DateOnly(2026, 9, 1),
-            CheckOutDate = new DateOnly(2026, 9, 5),
-            TotalAmount = 400m,
-            Status = ReservationStatus.Cancelled,
-            CreatedBy = 1
-        };
+        var hotel = new TestHotel(Today);
+        hotel.AddReservation(new DateOnly(2026, 9, 1), 4, status);
 
-        context.Users.Add(user);
-        context.Rooms.Add(room);
-        context.Reservations.Add(cancelled);
-        await context.SaveChangesAsync();
+        var result = await Handler(hotel).Handle(Command(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 5)), CancellationToken.None);
 
-        var handler = new CreateReservationCommandHandler(
-            new RoomRepository(context),
-            new ReservationRepository(context),
-            new UserRepository(context),
-            new AuditLogRepository(context),
-            new UnitOfWork(context),
-            _mockCurrentUser.Object,
-            _mockSignalR.Object);
-
-        var command = new CreateReservationCommand(
-            RoomId: 1,
-            GuestName: "New Guest",
-            CheckInDate: new DateOnly(2026, 9, 1),
-            CheckOutDate: new DateOnly(2026, 9, 5)
-        );
-
-        // Act
-        var result = await handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        Assert.NotNull(result);
         Assert.Equal(4, result.Nights);
         Assert.Equal(400m, result.TotalAmount);
     }
@@ -170,25 +78,55 @@ public class ReservationOverlapTests
     [Fact]
     public async Task CreateReservation_WhenCheckOutBeforeOrEqualToCheckIn_ThrowsValidationException()
     {
-        // Arrange
-        var context = TestDbContextFactory.Create(Guid.NewGuid().ToString());
-        var handler = new CreateReservationCommandHandler(
-            new RoomRepository(context),
-            new ReservationRepository(context),
-            new UserRepository(context),
-            new AuditLogRepository(context),
-            new UnitOfWork(context),
-            _mockCurrentUser.Object,
-            _mockSignalR.Object);
+        var hotel = new TestHotel(Today);
 
-        var command = new CreateReservationCommand(
-            RoomId: 1,
-            GuestName: "Invalid Guest",
-            CheckInDate: new DateOnly(2026, 9, 5),
-            CheckOutDate: new DateOnly(2026, 9, 5)
-        );
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            Handler(hotel).Handle(Command(new DateOnly(2026, 9, 5), new DateOnly(2026, 9, 5)), CancellationToken.None));
+    }
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => handler.Handle(command, CancellationToken.None));
+    [Fact]
+    public async Task CreateReservation_WhenCheckInIsInThePast_ThrowsValidationException()
+    {
+        var hotel = new TestHotel(Today);
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            Handler(hotel).Handle(Command(new DateOnly(2026, 8, 30), new DateOnly(2026, 9, 3)), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateReservation_WhenRoomIsOutOfService_ThrowsConflictException()
+    {
+        var hotel = new TestHotel(Today);
+        hotel.Room.IsAvailable = false;
+        await hotel.Context.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            Handler(hotel).Handle(Command(new DateOnly(2026, 9, 2), new DateOnly(2026, 9, 4)), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateReservation_WhenPhoneMatchesExistingGuest_ReusesGuestProfile()
+    {
+        var hotel = new TestHotel(Today);
+
+        var result = await Handler(hotel).Handle(
+            Command(new DateOnly(2026, 9, 2), new DateOnly(2026, 9, 4), phone: "+20 100 123 4567", name: "Existing Guest Updated"),
+            CancellationToken.None);
+
+        Assert.Equal(hotel.Guest.Id, result.GuestId);
+        Assert.Equal(1, await hotel.Context.Guests.CountAsync());
+        Assert.Equal("Existing Guest Updated", (await hotel.Context.Guests.SingleAsync()).FullName);
+    }
+
+    [Fact]
+    public async Task CreateReservation_WhenPhoneIsNew_CreatesGuestProfile()
+    {
+        var hotel = new TestHotel(Today);
+
+        var result = await Handler(hotel).Handle(Command(new DateOnly(2026, 9, 2), new DateOnly(2026, 9, 4)), CancellationToken.None);
+
+        Assert.NotEqual(hotel.Guest.Id, result.GuestId);
+        Assert.Equal("+201112223333", result.GuestPhone);
+        Assert.Equal(2, await hotel.Context.Guests.CountAsync());
     }
 }
