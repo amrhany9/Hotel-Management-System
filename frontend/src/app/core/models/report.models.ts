@@ -33,4 +33,9 @@ export interface DashboardStats {
   confirmedReservations: number;
   cancelledReservations: number;
   occupancyPercentage: number;
+  arrivalsToday: number;
+  departuresToday: number;
+  inHouse: number;
+  outstandingBalance: number;
+  paymentsThisMonth: number;
 }

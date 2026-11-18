@@ -1,21 +1,41 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { ReservationService, RoomService } from '../../core/services/api.services';
+import { GuestService, ReservationService, RoomService } from '../../core/services/api.services';
 import { SignalRService } from '../../core/services/signalr.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Reservation, Room, CreateReservationRequest } from '../../core/models/models';
-import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../core/services/translation.service';
 import {
+  CreateReservationRequest,
+  PaymentMethod,
+  Reservation,
+  ReservationDetail,
+  ReservationStatus,
+  Room,
+} from '../../core/models/models';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { RESERVATION_STATUSES, statusKey, statusVariant, todayIso } from '../../shared/reservation-status';
+import {
+  ComboboxOption,
+  UiBadgeComponent,
   UiButtonComponent,
   UiCardComponent,
-  UiBadgeComponent,
-  UiModalComponent,
-  UiInputComponent,
   UiComboboxComponent,
-  ComboboxOption,
+  UiInputComponent,
+  UiModalComponent,
 } from '../../shared/components/ui';
+
+type StayAction = 'checkIn' | 'checkOut' | 'noShow' | 'cancel';
+
+const ACTION_PROMPTS: Record<StayAction, { title: string; prompt: string }> = {
+  checkIn: { title: 'stay.checkIn', prompt: 'stay.checkInPrompt' },
+  checkOut: { title: 'stay.checkOut', prompt: 'stay.checkOutPrompt' },
+  noShow: { title: 'stay.markNoShow', prompt: 'stay.noShowPrompt' },
+  cancel: { title: 'reservations.cancelReservation', prompt: 'reservations.cancelPrompt' },
+};
 
 @Component({
   selector: 'app-reservations',
@@ -23,7 +43,9 @@ import {
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     TranslatePipe,
+    MoneyPipe,
     UiButtonComponent,
     UiCardComponent,
     UiBadgeComponent,
@@ -36,48 +58,80 @@ import {
 export class ReservationsComponent implements OnInit, OnDestroy {
   private reservationService = inject(ReservationService);
   private roomService = inject(RoomService);
+  private guestService = inject(GuestService);
   private signalRService = inject(SignalRService);
   private notificationService = inject(NotificationService);
+  private translationService = inject(TranslationService);
+
+  readonly today = todayIso();
+  readonly statusKey = statusKey;
+  readonly statusVariant = statusVariant;
 
   reservations = signal<Reservation[]>([]);
   filteredReservations = signal<Reservation[]>([]);
-  availableRooms = signal<Room[]>([]);
+  rooms = signal<Room[]>([]);
+  loading = signal(true);
   submitting = signal(false);
-  cancelling = signal(false);
+  working = signal(false);
 
-  // Filters
-  filterGuestName = '';
+  filterGuest = '';
   filterRoomNumber = '';
-  filterStatus: any = null;
+  filterStatus: ReservationStatus | null = null;
   filterCheckIn = '';
 
-  statusOptions: ComboboxOption[] = [
-    { label: 'Confirmed', value: 'Confirmed' },
-    { label: 'Cancelled', value: 'Cancelled' },
-  ];
+  statusOptions = computed<ComboboxOption[]>(() => {
+    this.translationService.currentLang();
+    return RESERVATION_STATUSES.map((s) => ({ label: this.translationService.translate(statusKey(s)), value: s }));
+  });
+
+  methodOptions = computed<ComboboxOption[]>(() => {
+    this.translationService.currentLang();
+    return [
+      { label: this.translationService.translate('payments.cash'), value: 'Cash' },
+      { label: this.translationService.translate('payments.card'), value: 'Card' },
+      { label: this.translationService.translate('payments.bankTransfer'), value: 'BankTransfer' },
+    ];
+  });
+
+  roomOptions = computed<ComboboxOption[]>(() =>
+    this.rooms()
+      .filter((r) => r.isAvailable)
+      .map((r) => ({
+        label: `Room ${r.roomNumber} (${r.roomType})`,
+        value: r.id,
+        subtext: `${r.pricePerNight}/night`,
+      }))
+  );
 
   get activeFilterCount(): number {
-    let count = 0;
-    if (this.filterGuestName.trim()) count++;
-    if (this.filterRoomNumber.trim()) count++;
-    if (this.filterStatus) count++;
-    if (this.filterCheckIn) count++;
-    return count;
+    return [this.filterGuest.trim(), this.filterRoomNumber.trim(), this.filterStatus, this.filterCheckIn].filter(Boolean).length;
   }
 
-  // Create Modal state
   isCreateModalOpen = false;
+  newGuestPhone = '';
   newGuestName = '';
-  newRoomId: any = null;
+  newGuestEmail = '';
+  newGuestIdNumber = '';
+  newRoomId: number | null = null;
   newCheckIn = '';
   newCheckOut = '';
+  newNotes = '';
+  returningGuest = signal(false);
   selectedRoomPrice = signal(0);
   estimatedNights = signal(0);
   estimatedTotal = signal<number | null>(null);
 
-  // Cancel Modal state
-  isCancelModalOpen = false;
-  resToCancel: Reservation | null = null;
+  detail = signal<ReservationDetail | null>(null);
+  isDetailOpen = false;
+  paymentAmount: number | string = '';
+  paymentMethod: PaymentMethod = 'Cash';
+  paymentReference = '';
+
+  pendingAction = signal<StayAction | null>(null);
+  pendingPrompt = computed(() => {
+    const action = this.pendingAction();
+    return action ? ACTION_PROMPTS[action] : null;
+  });
 
   private subs: Subscription[] = [];
 
@@ -87,7 +141,13 @@ export class ReservationsComponent implements OnInit, OnDestroy {
 
     this.subs.push(
       this.signalRService.reservationCreated$.subscribe(() => this.loadReservations()),
-      this.signalRService.reservationCancelled$.subscribe(() => this.loadReservations())
+      this.signalRService.reservationUpdated$.subscribe((event) => {
+        this.loadReservations();
+        const open = this.detail();
+        if (open && open.id === event.reservation.id && !this.working()) {
+          this.refreshDetail(open.id);
+        }
+      })
     );
   }
 
@@ -100,44 +160,119 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       next: (list) => {
         this.reservations.set(list);
         this.applyFilters();
+        this.loading.set(false);
       },
-      error: () => this.notificationService.error('Failed to load reservations'),
+      error: () => {
+        this.loading.set(false);
+        this.notificationService.error('Failed to load reservations');
+      },
     });
   }
 
   loadRooms(): void {
     this.roomService.getRooms().subscribe({
-      next: (list) => this.availableRooms.set(list),
+      next: (list) => this.rooms.set(list),
       error: () => this.notificationService.error('Failed to load rooms'),
     });
   }
 
-  roomComboboxOptions(): ComboboxOption[] {
-    return this.availableRooms().map((r) => ({
-      label: `Room ${r.roomNumber} (${r.roomType})`,
-      value: r.id,
-      subtext: `$${r.pricePerNight}/night`,
-      badge: r.isAvailable ? 'Available' : 'Occupied',
-    }));
+  applyFilters(): void {
+    let result = this.reservations();
+    const guest = this.filterGuest.trim().toLowerCase();
+    if (guest) {
+      const digits = guest.replace(/[^\d]/g, '');
+      result = result.filter(
+        (r) => r.guestName.toLowerCase().includes(guest) || (digits.length >= 3 && r.guestPhone.includes(digits))
+      );
+    }
+    const room = this.filterRoomNumber.trim().toLowerCase();
+    if (room) {
+      result = result.filter((r) => r.roomNumber.toLowerCase().includes(room));
+    }
+    if (this.filterStatus) {
+      result = result.filter((r) => r.status === this.filterStatus);
+    }
+    if (this.filterCheckIn) {
+      result = result.filter((r) => r.checkInDate >= this.filterCheckIn);
+    }
+    this.filteredReservations.set(result);
+  }
+
+  resetFilters(): void {
+    this.filterGuest = '';
+    this.filterRoomNumber = '';
+    this.filterStatus = null;
+    this.filterCheckIn = '';
+    this.filteredReservations.set(this.reservations());
+  }
+
+  canCheckIn(r: Reservation): boolean {
+    return r.status === 'Confirmed' && r.checkInDate <= this.today && r.checkOutDate > this.today;
+  }
+
+  canCheckOut(r: Reservation): boolean {
+    return r.status === 'CheckedIn';
+  }
+
+  canMarkNoShow(r: Reservation): boolean {
+    return r.status === 'Confirmed' && r.checkInDate <= this.today;
+  }
+
+  canCancel(r: Reservation): boolean {
+    return r.status === 'Confirmed';
+  }
+
+  canTakePayment(r: Reservation): boolean {
+    return r.balance > 0 && r.status !== 'Cancelled' && r.status !== 'NoShow';
+  }
+
+  openCreateModal(): void {
+    this.newGuestPhone = '';
+    this.newGuestName = '';
+    this.newGuestEmail = '';
+    this.newGuestIdNumber = '';
+    this.newRoomId = null;
+    this.newCheckIn = this.today;
+    this.newCheckOut = '';
+    this.newNotes = '';
+    this.returningGuest.set(false);
+    this.selectedRoomPrice.set(0);
+    this.estimatedTotal.set(null);
+    this.isCreateModalOpen = true;
+  }
+
+  closeCreateModal(): void {
+    this.isCreateModalOpen = false;
+  }
+
+  lookupGuest(): void {
+    const phone = this.newGuestPhone.trim();
+    if (phone.replace(/[^\d]/g, '').length < 7) {
+      this.returningGuest.set(false);
+      return;
+    }
+    this.guestService.lookupByPhone(phone).subscribe({
+      next: (guest) => {
+        this.returningGuest.set(!!guest);
+        if (guest) {
+          this.newGuestName = guest.fullName;
+          this.newGuestEmail = guest.email ?? '';
+          this.newGuestIdNumber = guest.idNumber ?? '';
+        }
+      },
+      error: () => this.returningGuest.set(false),
+    });
   }
 
   onRoomSelected(opt: ComboboxOption | null): void {
-    if (opt) {
-      const room = this.availableRooms().find((r) => r.id === opt.value);
-      this.selectedRoomPrice.set(room ? room.pricePerNight : 0);
-    } else {
-      this.selectedRoomPrice.set(0);
-    }
+    const room = opt ? this.rooms().find((r) => r.id === opt.value) : undefined;
+    this.selectedRoomPrice.set(room ? room.pricePerNight : 0);
     this.calculateLiveTotal();
   }
 
   calculateLiveTotal(): void {
     if (this.newCheckIn && this.newCheckOut && this.selectedRoomPrice() > 0) {
-      const start = new Date(this.newCheckIn);
-      const end = new Date(this.newCheckOut);
-      const diffMs = end.getTime() - start.getTime();
-      const nights = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
+      const nights = Math.round((Date.parse(this.newCheckOut) - Date.parse(this.newCheckIn)) / 86_400_000);
       if (nights > 0) {
         this.estimatedNights.set(nights);
         this.estimatedTotal.set(nights * this.selectedRoomPrice());
@@ -147,104 +282,139 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     this.estimatedTotal.set(null);
   }
 
-  applyFilters(): void {
-    let result = this.reservations();
-    if (this.filterGuestName.trim()) {
-      const q = this.filterGuestName.trim().toLowerCase();
-      result = result.filter((r) => r.guestName.toLowerCase().includes(q));
-    }
-    if (this.filterRoomNumber.trim()) {
-      const q = this.filterRoomNumber.trim().toLowerCase();
-      result = result.filter((r) => r.roomNumber.toLowerCase().includes(q));
-    }
-    if (this.filterStatus) {
-      result = result.filter((r) => r.status.toLowerCase() === this.filterStatus.toLowerCase());
-    }
-    if (this.filterCheckIn) {
-      result = result.filter((r) => r.checkInDate >= this.filterCheckIn);
-    }
-    this.filteredReservations.set(result);
-  }
-
-  resetFilters(): void {
-    this.filterGuestName = '';
-    this.filterRoomNumber = '';
-    this.filterStatus = null;
-    this.filterCheckIn = '';
-    this.filteredReservations.set(this.reservations());
-  }
-
-  openCreateModal(): void {
-    this.newGuestName = '';
-    this.newRoomId = null;
-    this.newCheckIn = '';
-    this.newCheckOut = '';
-    this.estimatedTotal.set(null);
-    this.isCreateModalOpen = true;
-  }
-
-  closeCreateModal(): void {
-    this.isCreateModalOpen = false;
-  }
-
   createReservation(): void {
-    if (!this.newGuestName || !this.newRoomId || !this.newCheckIn || !this.newCheckOut) {
-      this.notificationService.warning('Please complete all reservation fields');
+    if (!this.newGuestName.trim() || !this.newGuestPhone.trim() || !this.newRoomId || !this.newCheckIn || !this.newCheckOut) {
+      this.notificationService.warning('Please complete the guest name, phone, room and dates');
       return;
     }
-
     if (this.newCheckOut <= this.newCheckIn) {
       this.notificationService.warning('Check-out date must be after check-in date');
       return;
     }
 
     const payload: CreateReservationRequest = {
-      guestName: this.newGuestName.trim(),
       roomId: Number(this.newRoomId),
+      guestName: this.newGuestName.trim(),
+      guestPhone: this.newGuestPhone.trim(),
+      guestEmail: this.newGuestEmail.trim() || null,
+      guestIdNumber: this.newGuestIdNumber.trim() || null,
       checkInDate: this.newCheckIn,
       checkOutDate: this.newCheckOut,
+      notes: this.newNotes.trim() || null,
     };
 
     this.submitting.set(true);
     this.reservationService.createReservation(payload).subscribe({
       next: (res) => {
         this.submitting.set(false);
-        this.notificationService.success(`Reservation created for ${res.guestName}`);
         this.closeCreateModal();
         this.loadReservations();
+        this.openDetail(res);
       },
       error: (err) => {
         this.submitting.set(false);
-        this.notificationService.error(err.error?.detail || 'Failed to create reservation');
+        this.notificationService.error(this.errorMessage(err, 'Failed to create reservation'));
       },
     });
   }
 
-  confirmCancel(res: Reservation): void {
-    this.resToCancel = res;
-    this.isCancelModalOpen = true;
+  openDetail(r: Reservation): void {
+    this.pendingAction.set(null);
+    this.detail.set(null);
+    this.isDetailOpen = true;
+    this.refreshDetail(r.id);
   }
 
-  closeCancelModal(): void {
-    this.isCancelModalOpen = false;
-    this.resToCancel = null;
+  closeDetail(): void {
+    this.pendingAction.set(null);
+    this.isDetailOpen = false;
+    this.detail.set(null);
   }
 
-  executeCancel(): void {
-    if (!this.resToCancel) return;
+  private refreshDetail(id: number): void {
+    this.reservationService.getReservationById(id).subscribe({
+      next: (d) => this.setDetail(d),
+      error: () => this.notificationService.error('Failed to load reservation'),
+    });
+  }
 
-    this.cancelling.set(true);
-    this.reservationService.cancelReservation(this.resToCancel.id).subscribe({
-      next: () => {
-        this.cancelling.set(false);
-        this.notificationService.success('Reservation cancelled');
-        this.closeCancelModal();
+  private setDetail(d: ReservationDetail): void {
+    this.detail.set(d);
+    this.paymentAmount = d.balance > 0 ? d.balance : '';
+    this.paymentMethod = 'Cash';
+    this.paymentReference = '';
+  }
+
+  askAction(action: StayAction): void {
+    this.pendingAction.set(action);
+  }
+
+  cancelAction(): void {
+    this.pendingAction.set(null);
+  }
+
+  runAction(): void {
+    const d = this.detail();
+    const action = this.pendingAction();
+    if (!d || !action) return;
+
+    const call = {
+      checkIn: () => this.reservationService.checkIn(d.id),
+      checkOut: () => this.reservationService.checkOut(d.id),
+      noShow: () => this.reservationService.markNoShow(d.id),
+      cancel: () => this.reservationService.cancelReservation(d.id),
+    }[action];
+
+    this.working.set(true);
+    call().subscribe({
+      next: (updated) => {
+        this.working.set(false);
+        this.pendingAction.set(null);
+        this.setDetail(updated);
         this.loadReservations();
       },
       error: (err) => {
-        this.cancelling.set(false);
-        this.notificationService.error(err.error?.detail || 'Failed to cancel reservation');
+        this.working.set(false);
+        this.pendingAction.set(null);
+        this.notificationService.error(this.errorMessage(err, 'The action could not be completed'));
       },
     });
+  }
+
+  recordPayment(): void {
+    const d = this.detail();
+    const amount = Number(this.paymentAmount);
+    if (!d || !amount || amount <= 0) {
+      this.notificationService.warning('Enter a payment amount greater than zero');
+      return;
+    }
+
+    this.working.set(true);
+    this.reservationService
+      .recordPayment(d.id, { amount, method: this.paymentMethod, reference: this.paymentReference.trim() || null })
+      .subscribe({
+        next: (updated) => {
+          this.working.set(false);
+          this.setDetail(updated);
+          this.loadReservations();
+        },
+        error: (err) => {
+          this.working.set(false);
+          this.notificationService.error(this.errorMessage(err, 'The payment could not be recorded'));
+        },
+      });
+  }
+
+  methodKey(method: PaymentMethod): string {
+    return method === 'BankTransfer' ? 'payments.bankTransfer' : method === 'Card' ? 'payments.card' : 'payments.cash';
+  }
+
+  private errorMessage(err: any, fallback: string): string {
+    const errors = err?.error?.errors;
+    if (errors) {
+      const first = Object.values(errors).flat()[0];
+      if (typeof first === 'string') return first;
+    }
+    return err?.error?.detail || fallback;
   }
 }

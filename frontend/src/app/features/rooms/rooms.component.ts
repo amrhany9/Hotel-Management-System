@@ -7,6 +7,8 @@ import { SignalRService } from '../../core/services/signalr.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Room, CreateRoomRequest, UpdateRoomRequest } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { AuthService } from '../../core/services/auth.service';
 import {
   UiButtonComponent,
   UiCardComponent,
@@ -24,6 +26,7 @@ import {
     CommonModule,
     FormsModule,
     TranslatePipe,
+    MoneyPipe,
     UiButtonComponent,
     UiCardComponent,
     UiBadgeComponent,
@@ -37,6 +40,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
   private roomService = inject(RoomService);
   private signalRService = inject(SignalRService);
   private notificationService = inject(NotificationService);
+  authService = inject(AuthService);
 
   rooms = signal<Room[]>([]);
   filteredRooms = signal<Room[]>([]);
@@ -61,10 +65,11 @@ export class RoomsComponent implements OnInit, OnDestroy {
   modalIsAvailable = true;
 
   roomTypeOptions: ComboboxOption[] = [
-    { label: 'Single', value: 'Single', subtext: '1 King or Queen bed' },
-    { label: 'Double', value: 'Double', subtext: '2 Double beds' },
-    { label: 'Suite', value: 'Suite', subtext: 'Master suite with living room' },
-    { label: 'Deluxe', value: 'Deluxe', subtext: 'Luxury suite with balcony' },
+    { label: 'Standard', value: 'Standard', subtext: 'Queen bed, city view' },
+    { label: 'Deluxe', value: 'Deluxe', subtext: 'King bed, Nile view' },
+    { label: 'Junior Suite', value: 'Junior Suite', subtext: 'Bedroom with sitting area' },
+    { label: 'Family Suite', value: 'Family Suite', subtext: 'Two bedrooms, sleeps four' },
+    { label: 'Presidential Suite', value: 'Presidential Suite', subtext: 'Top floor, private terrace' },
   ];
 
   get activeFilterCount(): number {
@@ -77,16 +82,11 @@ export class RoomsComponent implements OnInit, OnDestroy {
   }
 
   getRoomTypeVariant(type: string): 'info' | 'success' | 'warning' | 'neutral' {
-    switch (type.toLowerCase()) {
-      case 'suite':
-        return 'info';
-      case 'deluxe':
-        return 'success';
-      case 'double':
-        return 'warning';
-      default:
-        return 'neutral';
-    }
+    const t = type.toLowerCase();
+    if (t.includes('presidential') || t.includes('family')) return 'warning';
+    if (t.includes('suite')) return 'info';
+    if (t.includes('deluxe')) return 'success';
+    return 'neutral';
   }
 
   private subs: Subscription[] = [];

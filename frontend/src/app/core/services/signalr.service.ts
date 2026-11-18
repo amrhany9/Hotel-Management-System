@@ -4,7 +4,7 @@ import { Subject } from 'rxjs';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
-import { Reservation, Room } from '../models/models';
+import { Reservation, ReservationUpdatedEvent, Room } from '../models/models';
 
 @Injectable({
   providedIn: 'root'
@@ -16,7 +16,7 @@ export class SignalRService {
   private hubConnection: signalR.HubConnection | null = null;
 
   public reservationCreated$ = new Subject<Reservation>();
-  public reservationCancelled$ = new Subject<number>();
+  public reservationUpdated$ = new Subject<ReservationUpdatedEvent>();
   public roomCreated$ = new Subject<Room>();
   public roomUpdated$ = new Subject<Room>();
   public roomDeleted$ = new Subject<number>();
@@ -96,13 +96,29 @@ export class SignalRService {
       this.reservationCreated$.next(reservation);
     });
 
-    this.hubConnection.on('reservationCancelled', (reservationId: number) => {
-      console.log('[SignalR] Received reservationCancelled:', reservationId);
-      this.notificationService.warning(
-        `Reservation #${reservationId} was cancelled.`,
-        'Reservation Cancelled'
-      );
-      this.reservationCancelled$.next(reservationId);
+    this.hubConnection.on('reservationUpdated', (event: ReservationUpdatedEvent) => {
+      const r = event.reservation;
+      const message = `${r.guestName} · Room ${r.roomNumber} (#${r.id})`;
+      switch (event.action) {
+        case 'Checked in':
+          this.notificationService.success(message, 'Guest Checked In');
+          break;
+        case 'Checked out':
+          this.notificationService.info(message, 'Guest Checked Out');
+          break;
+        case 'Payment':
+          this.notificationService.success(message, 'Payment Recorded');
+          break;
+        case 'Cancelled':
+          this.notificationService.warning(message, 'Reservation Cancelled');
+          break;
+        case 'No-show':
+          this.notificationService.warning(message, 'Marked as No-Show');
+          break;
+        default:
+          this.notificationService.info(message, 'Reservation Updated');
+      }
+      this.reservationUpdated$.next(event);
     });
 
     this.hubConnection.on('roomCreated', (room: Room) => {

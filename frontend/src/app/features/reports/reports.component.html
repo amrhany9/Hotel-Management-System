@@ -112,7 +112,7 @@
                   {{ room.reservationCount }} bookings
                 </td>
                 <td class="data-table-cell text-end font-mono font-black text-emerald-600 dark:text-emerald-400 text-base">
-                  &#36;{{ room.totalRevenue | number: '1.2-2' }}
+                  {{ room.totalRevenue | money }}
                 </td>
               </tr>
             } @empty {
@@ -164,7 +164,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <ui-stat-card
             [label]="'reports.totalRevenue' | translate"
-            [value]="'$' + (revenueReport()?.totalRevenue ?? 0 | number: '1.2-2')"
+            [value]="revenueReport()?.totalRevenue | money"
             color="emerald"
             trend="up"
             trendValue="Revenue"
@@ -217,7 +217,7 @@
                     <td class="data-table-cell text-slate-600 dark:text-slate-300 w-56">{{ row.reservationCount }}</td>
                     <td class="data-table-cell text-slate-600 dark:text-slate-300 w-56">{{ row.totalNights }}</td>
                     <td class="data-table-cell text-end font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base">
-                      &#36;{{ row.totalRevenue | number: '1.2-2' }}
+                      {{ row.totalRevenue | money }}
                     </td>
                   </tr>
                 }

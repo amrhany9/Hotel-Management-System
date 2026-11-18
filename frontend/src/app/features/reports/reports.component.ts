@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../core/services/api.services';
 import { TopRoomReport, RevenueReport, OccupancyReportItem } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import {
   UiButtonComponent,
   UiCardComponent,
@@ -18,6 +19,7 @@ import {
     CommonModule,
     FormsModule,
     TranslatePipe,
+    MoneyPipe,
     UiButtonComponent,
     UiCardComponent,
     UiInputComponent,

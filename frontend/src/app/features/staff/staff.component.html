@@ -1,0 +1,87 @@
+<div class="flex flex-col gap-6 sm:gap-8 animate-in fade-in duration-300">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{{ 'staff.title' | translate }}</h1>
+      <p class="page-sub">{{ 'staff.subtitle' | translate }}</p>
+    </div>
+    <ui-button variant="primary" (clicked)="openModal()">
+      <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+      </svg>
+      <span>{{ 'staff.addStaff' | translate }}</span>
+    </ui-button>
+  </div>
+
+  <ui-card padding="none">
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm">
+        <thead class="data-table-head">
+          <tr>
+            <th class="data-table-cell text-start font-bold">{{ 'auth.fullName' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'auth.email' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'staff.role' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'common.status' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'staff.joined' | translate }}</th>
+            <th class="data-table-cell text-end font-bold">{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          @for (u of users(); track u.id) {
+            <tr class="data-table-row" [class.opacity-60]="!u.isActive">
+              <td class="data-table-cell font-bold text-slate-900 dark:text-white">
+                {{ u.fullName }}
+                @if (isSelf(u)) {<span class="ms-1.5 text-[10px] font-bold text-primary-600 uppercase">({{ 'staff.you' | translate }})</span>}
+              </td>
+              <td class="data-table-cell text-xs font-mono">{{ u.email }}</td>
+              <td class="data-table-cell">
+                <ui-badge [variant]="u.role === 'Admin' ? 'info' : 'neutral'" size="sm">{{ roleKey(u.role) | translate }}</ui-badge>
+              </td>
+              <td class="data-table-cell">
+                <ui-badge [variant]="u.isActive ? 'success' : 'danger'" [dot]="true" size="sm">
+                  {{ (u.isActive ? 'common.active' : 'common.inactive') | translate }}
+                </ui-badge>
+              </td>
+              <td class="data-table-cell text-xs text-slate-500">{{ u.createdAt | date: 'mediumDate' }}</td>
+              <td class="data-table-cell text-end">
+                @if (!isSelf(u)) {
+                  <ui-button [variant]="u.isActive ? 'outline' : 'success'" size="xs" [loading]="togglingId() === u.id" (clicked)="toggle(u)">
+                    {{ (u.isActive ? 'staff.deactivate' : 'staff.activate') | translate }}
+                  </ui-button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="data-table-cell py-12 text-center text-slate-400 text-xs">{{ (loading() ? 'common.loading' : 'common.noData') | translate }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </ui-card>
+
+  <ui-modal [isOpen]="isModalOpen" [title]="'staff.addStaff' | translate" size="md" (closed)="closeModal()">
+    <form (ngSubmit)="create()" class="flex flex-col gap-4">
+      <ui-input [label]="'auth.fullName' | translate" labelStyle="normal" [(value)]="fullName" [required]="true"></ui-input>
+      <ui-input [label]="'auth.email' | translate" labelStyle="normal" type="email" [(value)]="email" [required]="true" placeholder="name@hotel.local"></ui-input>
+      <ui-input
+        [label]="'auth.password' | translate"
+        labelStyle="normal"
+        type="password"
+        [(value)]="password"
+        [required]="true"
+        [hint]="'staff.passwordHint' | translate"
+      ></ui-input>
+      <ui-combobox
+        [label]="'staff.role' | translate"
+        labelStyle="normal"
+        [options]="roleOptions()"
+        [searchable]="false"
+        [allowClear]="false"
+        [(value)]="role"
+      ></ui-combobox>
+    </form>
+    <div slot="footer">
+      <ui-button variant="secondary" (clicked)="closeModal()">{{ 'common.cancel' | translate }}</ui-button>
+      <ui-button variant="primary" (clicked)="create()" [loading]="saving()">{{ 'staff.addStaff' | translate }}</ui-button>
+    </div>
+  </ui-modal>
+</div>

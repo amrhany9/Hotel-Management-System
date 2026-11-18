@@ -1,0 +1,63 @@
+<div class="flex flex-col gap-6 sm:gap-8 animate-in fade-in duration-300">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{{ 'guests.title' | translate }}</h1>
+      <p class="page-sub">{{ 'guests.subtitle' | translate }}</p>
+    </div>
+    <div class="w-full sm:w-80">
+      <ui-input
+        [placeholder]="'guests.searchPlaceholder' | translate"
+        [(value)]="search"
+        (valueChange)="onSearch($event)"
+      ></ui-input>
+    </div>
+  </div>
+
+  <ui-card padding="none">
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm">
+        <thead class="data-table-head">
+          <tr>
+            <th class="data-table-cell text-start font-bold">{{ 'reservations.guest' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'guests.phone' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'guests.email' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'guests.idNumber' | translate }}</th>
+            <th class="data-table-cell text-end font-bold">{{ 'guests.stays' | translate }}</th>
+            <th class="data-table-cell text-end font-bold">{{ 'guests.totalPaid' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'guests.lastStay' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          @if (loading()) {
+            <tr><td colspan="7" class="data-table-cell py-12 text-center text-slate-400 text-xs">{{ 'common.loading' | translate }}</td></tr>
+          }
+          @for (g of guests(); track g.id) {
+            <tr class="data-table-row">
+              <td class="data-table-cell">
+                <div class="flex items-center gap-2.5 min-w-[10rem]">
+                  <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                    {{ g.fullName[0]?.toUpperCase() }}
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-900 dark:text-white">{{ g.fullName }}</div>
+                    <div class="text-[11px] text-slate-400">{{ 'guests.guestSince' | translate }} {{ g.createdAt | date: 'MMM y' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="data-table-cell font-mono text-xs" dir="ltr">{{ g.phone || '—' }}</td>
+              <td class="data-table-cell text-xs text-slate-600 dark:text-slate-300">{{ g.email || '—' }}</td>
+              <td class="data-table-cell font-mono text-xs text-slate-500">{{ g.idNumber || '—' }}</td>
+              <td class="data-table-cell text-end font-bold">{{ g.totalStays }}</td>
+              <td class="data-table-cell text-end font-mono font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">{{ g.totalPaid | money }}</td>
+              <td class="data-table-cell text-xs text-slate-500 whitespace-nowrap">{{ g.lastStay || '—' }}</td>
+            </tr>
+          } @empty {
+            @if (!loading()) {
+              <tr><td colspan="7" class="data-table-cell py-12 text-center text-slate-400 text-xs">{{ 'common.noData' | translate }}</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </ui-card>
+</div>

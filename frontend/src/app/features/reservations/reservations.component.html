@@ -1,13 +1,8 @@
 <div class="flex flex-col gap-6 sm:gap-8 animate-in fade-in duration-300">
-  <!-- Header -->
   <div class="page-header">
     <div>
-      <h1 class="page-title">
-        {{ 'reservations.title' | translate }}
-      </h1>
-      <p class="page-sub">
-        {{ 'reservations.subtitle' | translate }}
-      </p>
+      <h1 class="page-title">{{ 'reservations.title' | translate }}</h1>
+      <p class="page-sub">{{ 'reservations.subtitle' | translate }}</p>
     </div>
 
     <ui-button variant="primary" size="md" (clicked)="openCreateModal()">
@@ -18,57 +13,47 @@
     </ui-button>
   </div>
 
-  <!-- Filters Card -->
   <ui-card padding="md">
     <div class="flex flex-wrap items-end gap-4">
-      <div class="w-full sm:w-60 lg:w-64">
+      <div class="w-full sm:w-64">
         <ui-input
-          [label]="'reservations.guestName' | translate"
+          [label]="'reservations.guest' | translate"
           [placeholder]="'reservations.filterByGuest' | translate"
-          [(value)]="filterGuestName"
+          [(value)]="filterGuest"
+          (valueChange)="applyFilters()"
         ></ui-input>
       </div>
-
       <div class="w-full sm:w-36">
         <ui-input
           [label]="'rooms.roomNumber' | translate"
           [placeholder]="'reservations.filterByRoom' | translate"
           [(value)]="filterRoomNumber"
+          (valueChange)="applyFilters()"
         ></ui-input>
       </div>
-
       <div class="w-full sm:w-48">
         <ui-combobox
           [label]="'common.status' | translate"
           [placeholder]="'reservations.allStatuses' | translate"
-          [options]="statusOptions"
+          [options]="statusOptions()"
+          [searchable]="false"
           [(value)]="filterStatus"
+          (valueChange)="applyFilters()"
         ></ui-combobox>
       </div>
-
       <div class="w-full sm:w-44">
         <ui-input
           [label]="'reservations.checkInDate' | translate"
           type="date"
           [(value)]="filterCheckIn"
+          (valueChange)="applyFilters()"
         ></ui-input>
       </div>
-
       <div class="flex items-center gap-2">
-        <ui-button variant="primary" size="md" (clicked)="applyFilters()">
-          <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-          </svg>
-          <span>{{ 'common.filter' | translate }}</span>
-        </ui-button>
-
         @if (activeFilterCount > 0) {
-          <ui-badge variant="info" size="sm">
-            {{ activeFilterCount }} active
-          </ui-badge>
+          <ui-badge variant="info" size="sm">{{ activeFilterCount }} {{ 'common.active' | translate }}</ui-badge>
         }
-
-        <ui-button variant="outline" size="md" (clicked)="resetFilters()" title="{{ 'common.reset' | translate }}">
+        <ui-button variant="outline" size="md" (clicked)="resetFilters()" title="{{ 'common.clear' | translate }}">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
@@ -77,176 +62,311 @@
     </div>
   </ui-card>
 
-  <!-- Reservations Table -->
   <ui-card padding="none">
     <div class="overflow-x-auto">
       <table class="w-full text-start text-sm">
         <thead class="data-table-head">
           <tr>
-            <th class="data-table-cell text-start font-bold w-20">{{ 'common.id' | translate }}</th>
-            <th class="data-table-cell text-start font-bold w-56">{{ 'reservations.guestName' | translate }}</th>
-            <th class="data-table-cell text-start font-bold w-44">{{ 'rooms.roomNumber' | translate }}</th>
-            <th class="data-table-cell text-start font-bold w-56">{{ 'reservations.stayDuration' | translate }}</th>
-            <th class="data-table-cell text-start font-bold w-40">{{ 'reservations.totalAmount' | translate }}</th>
-            <th class="data-table-cell text-start font-bold w-44">{{ 'reservations.bookedBy' | translate }}</th>
-            <th class="data-table-cell text-start font-bold w-36">{{ 'common.status' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'common.id' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'reservations.guest' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'rooms.roomNumber' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'reservations.stayDuration' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'reservations.totalAmount' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'reservations.balance' | translate }}</th>
+            <th class="data-table-cell text-start font-bold">{{ 'common.status' | translate }}</th>
             <th class="data-table-cell text-end font-bold">{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          @if (loading()) {
+            <tr><td colspan="8" class="data-table-cell py-12 text-center text-slate-400 text-xs">{{ 'common.loading' | translate }}</td></tr>
+          }
           @for (r of filteredReservations(); track r.id) {
             <tr class="data-table-row">
-              <td class="data-table-cell font-mono text-xs text-slate-400 w-20">#{{ r.id }}</td>
-              <td class="data-table-cell font-bold text-slate-900 dark:text-white w-56">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+              <td class="data-table-cell font-mono text-xs text-slate-400">#{{ r.id }}</td>
+              <td class="data-table-cell">
+                <div class="flex items-center gap-2.5 min-w-[11rem]">
+                  <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
                     {{ r.guestName[0]?.toUpperCase() }}
                   </div>
-                  <span class="truncate">{{ r.guestName }}</span>
+                  <div class="min-w-0">
+                    <div class="font-bold text-slate-900 dark:text-white truncate">{{ r.guestName }}</div>
+                    <div class="text-[11px] text-slate-400 font-mono" dir="ltr">{{ r.guestPhone }}</div>
+                  </div>
                 </div>
               </td>
-              <td class="data-table-cell w-44">
+              <td class="data-table-cell whitespace-nowrap">
                 <span class="font-bold text-slate-900 dark:text-white">#{{ r.roomNumber }}</span>
-                <span class="text-xs text-slate-400 ms-1.5 font-normal">({{ r.roomType }})</span>
+                <span class="text-xs text-slate-400 ms-1.5">{{ r.roomType }}</span>
               </td>
-              <td class="data-table-cell text-xs w-56">
+              <td class="data-table-cell text-xs whitespace-nowrap">
                 <div class="border-s-2 border-primary-300 dark:border-primary-700 ps-2.5 py-0.5">
-                  <div class="font-medium text-slate-800 dark:text-slate-200">{{ r.checkInDate }}</div>
-                  <div class="text-[11px] text-slate-400">→ {{ r.checkOutDate }} ({{ r.nights }} {{ 'common.nights' | translate }})</div>
+                  <div class="font-medium text-slate-800 dark:text-slate-200">{{ r.checkInDate }} → {{ r.checkOutDate }}</div>
+                  <div class="text-[11px] text-slate-400">{{ r.nights }} {{ 'common.nights' | translate }}</div>
                 </div>
               </td>
-              <td class="data-table-cell font-mono font-bold text-emerald-700 dark:text-emerald-400 text-base w-40">
-                &#36;{{ r.totalAmount | number: '1.2-2' }}
+              <td class="data-table-cell font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">{{ r.totalAmount | money }}</td>
+              <td class="data-table-cell whitespace-nowrap">
+                @if (r.status === 'Cancelled' || r.status === 'NoShow') {
+                  <span class="text-xs text-slate-400">—</span>
+                } @else if (r.balance <= 0) {
+                  <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ 'payments.paidInFull' | translate }}</span>
+                } @else {
+                  <span class="font-mono font-bold text-amber-600 dark:text-amber-400">{{ r.balance | money }}</span>
+                }
               </td>
-              <td class="data-table-cell text-xs text-slate-500 dark:text-slate-400 w-44">
-                {{ r.createdByName }}
-              </td>
-              <td class="data-table-cell w-36">
-                <ui-badge
-                  [variant]="r.status === 'Confirmed' ? 'success' : 'danger'"
-                  [dot]="true"
-                  [pulse]="r.status === 'Confirmed'"
-                  size="sm"
-                >
-                  {{ (r.status === 'Confirmed' ? 'reservations.confirmed' : 'reservations.cancelled') | translate }}
+              <td class="data-table-cell">
+                <ui-badge [variant]="statusVariant(r.status)" [dot]="true" [pulse]="r.status === 'CheckedIn'" size="sm">
+                  {{ statusKey(r.status) | translate }}
                 </ui-badge>
               </td>
-              <td class="data-table-cell text-end">
-                @if (r.status === 'Confirmed') {
-                  <ui-button variant="danger" size="xs" (clicked)="confirmCancel(r)">
-                    <span>{{ 'reservations.cancelReservation' | translate }}</span>
-                  </ui-button>
-                } @else {
-                  <span class="text-xs text-slate-400">—</span>
-                }
+              <td class="data-table-cell text-end whitespace-nowrap">
+                <div class="inline-flex items-center gap-1.5">
+                  @if (canCheckIn(r)) {
+                    <ui-button variant="success" size="xs" (clicked)="openDetail(r); askAction('checkIn')">{{ 'stay.checkIn' | translate }}</ui-button>
+                  }
+                  @if (canCheckOut(r)) {
+                    <ui-button variant="primary" size="xs" (clicked)="openDetail(r)">{{ 'stay.checkOut' | translate }}</ui-button>
+                  }
+                  <ui-button variant="outline" size="xs" (clicked)="openDetail(r)">{{ 'reservations.viewDetails' | translate }}</ui-button>
+                </div>
               </td>
             </tr>
           } @empty {
-            <tr>
-              <td colspan="8" class="data-table-cell py-12 text-center text-slate-400 text-xs">
-                {{ 'common.noData' | translate }}
-              </td>
-            </tr>
+            @if (!loading()) {
+              <tr><td colspan="8" class="data-table-cell py-12 text-center text-slate-400 text-xs">{{ 'common.noData' | translate }}</td></tr>
+            }
           }
         </tbody>
       </table>
     </div>
   </ui-card>
 
-  <!-- Create Reservation Modal -->
-  <ui-modal
-    [isOpen]="isCreateModalOpen"
-    [title]="'reservations.newReservation' | translate"
-    subtitle="Select dates and room for automatic live rate calculation"
-    size="lg"
-    (closed)="closeCreateModal()"
-  >
-    <form (ngSubmit)="createReservation()" class="flex flex-col gap-4">
-      <ui-input
-        [label]="'reservations.guestName' | translate"
-        labelStyle="normal"
-        [(value)]="newGuestName"
-        [required]="true"
-        placeholder="John Doe"
-      ></ui-input>
-
-      <ui-combobox
-        [label]="'reservations.selectRoom' | translate"
-        labelStyle="normal"
-        [options]="roomComboboxOptions()"
-        [(value)]="newRoomId"
-        (selectionChange)="onRoomSelected($event)"
-        [required]="true"
-        placeholder="Select a room..."
-      ></ui-combobox>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <ui-input
-          [label]="'reservations.checkInDate' | translate"
-          labelStyle="normal"
-          type="date"
-          [(value)]="newCheckIn"
-          (valueChange)="calculateLiveTotal()"
-          [required]="true"
-        ></ui-input>
-
-        <ui-input
-          [label]="'reservations.checkOutDate' | translate"
-          labelStyle="normal"
-          type="date"
-          [(value)]="newCheckOut"
-          (valueChange)="calculateLiveTotal()"
-          [required]="true"
-        ></ui-input>
+  <ui-modal [isOpen]="isCreateModalOpen" [title]="'reservations.newReservation' | translate" size="lg" (closed)="closeCreateModal()">
+    <form (ngSubmit)="createReservation()" class="flex flex-col gap-5">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">{{ 'reservations.guestDetails' | translate }}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <ui-input
+            [label]="'reservations.guestPhone' | translate"
+            labelStyle="normal"
+            type="tel"
+            [(value)]="newGuestPhone"
+            (focusout)="lookupGuest()"
+            [required]="true"
+            placeholder="+20 100 123 4567"
+            [hint]="returningGuest() ? ('reservations.returningGuest' | translate) : undefined"
+          ></ui-input>
+          <ui-input
+            [label]="'reservations.guestName' | translate"
+            labelStyle="normal"
+            [(value)]="newGuestName"
+            [required]="true"
+            placeholder="Mona Adel"
+          ></ui-input>
+          <ui-input
+            [label]="('reservations.guestEmail' | translate) + ' (' + ('reservations.optional' | translate) + ')'"
+            labelStyle="normal"
+            type="email"
+            [(value)]="newGuestEmail"
+            placeholder="mona@example.com"
+          ></ui-input>
+          <ui-input
+            [label]="('reservations.guestIdNumber' | translate) + ' (' + ('reservations.optional' | translate) + ')'"
+            labelStyle="normal"
+            [(value)]="newGuestIdNumber"
+          ></ui-input>
+        </div>
       </div>
 
-      <!-- Live Price Summary -->
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">{{ 'reservations.stayDetails' | translate }}</p>
+        <div class="flex flex-col gap-4">
+          <ui-combobox
+            [label]="'reservations.selectRoom' | translate"
+            labelStyle="normal"
+            [options]="roomOptions()"
+            [placeholder]="'reservations.selectRoom' | translate"
+            [(value)]="newRoomId"
+            (selectionChange)="onRoomSelected($event)"
+            [required]="true"
+          ></ui-combobox>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ui-input
+              [label]="'reservations.checkInDate' | translate"
+              labelStyle="normal"
+              type="date"
+              [min]="today"
+              [(value)]="newCheckIn"
+              (valueChange)="calculateLiveTotal()"
+              [required]="true"
+            ></ui-input>
+            <ui-input
+              [label]="'reservations.checkOutDate' | translate"
+              labelStyle="normal"
+              type="date"
+              [min]="newCheckIn || today"
+              [(value)]="newCheckOut"
+              (valueChange)="calculateLiveTotal()"
+              [required]="true"
+            ></ui-input>
+          </div>
+          <ui-input
+            [label]="('reservations.notes' | translate) + ' (' + ('reservations.optional' | translate) + ')'"
+            labelStyle="normal"
+            [(value)]="newNotes"
+            [placeholder]="'reservations.notesPlaceholder' | translate"
+          ></ui-input>
+        </div>
+      </div>
+
       @if (estimatedTotal() !== null) {
-        <div class="p-5 rounded-2xl bg-gradient-to-tr from-primary-50 to-indigo-50/70 dark:from-primary-950/40 dark:to-indigo-950/40 border border-primary-200/80 dark:border-primary-800/60 shadow-card flex items-center justify-between">
+        <div class="p-5 rounded-2xl bg-gradient-to-tr from-primary-50 to-indigo-50/70 dark:from-primary-950/40 dark:to-indigo-950/40 border border-primary-200/80 dark:border-primary-800/60 flex items-center justify-between">
           <div>
             <p class="text-xs font-bold text-primary-900 dark:text-primary-200 uppercase tracking-wider">
               {{ 'reservations.totalAmount' | translate }} ({{ estimatedNights() }} {{ 'common.nights' | translate }})
             </p>
-            <p class="text-xs text-primary-700/80 dark:text-primary-400 mt-0.5">
-              &#64; &#36;{{ selectedRoomPrice() }}/night
-            </p>
+            <p class="text-xs text-primary-700/80 dark:text-primary-400 mt-0.5">{{ selectedRoomPrice() | money }} {{ 'common.perNight' | translate }}</p>
           </div>
-          <div class="font-mono text-2xl sm:text-3xl font-black text-primary-700 dark:text-primary-300">
-            &#36;{{ estimatedTotal() | number: '1.2-2' }}
-          </div>
+          <div class="font-mono text-2xl sm:text-3xl font-black text-primary-700 dark:text-primary-300">{{ estimatedTotal() | money }}</div>
         </div>
       }
     </form>
 
     <div slot="footer">
-      <ui-button variant="secondary" (clicked)="closeCreateModal()">
-        {{ 'common.cancel' | translate }}
-      </ui-button>
-      <ui-button variant="primary" (clicked)="createReservation()" [loading]="submitting()">
-        {{ 'reservations.newReservation' | translate }}
-      </ui-button>
+      <ui-button variant="secondary" (clicked)="closeCreateModal()">{{ 'common.cancel' | translate }}</ui-button>
+      <ui-button variant="primary" (clicked)="createReservation()" [loading]="submitting()">{{ 'reservations.newReservation' | translate }}</ui-button>
     </div>
   </ui-modal>
 
-  <!-- Cancel Confirmation Modal -->
   <ui-modal
-    [isOpen]="isCancelModalOpen"
-    [title]="'reservations.cancelReservation' | translate"
-    size="sm"
-    (closed)="closeCancelModal()"
+    [isOpen]="isDetailOpen"
+    [title]="detail() ? ('#' + detail()!.id + ' · ' + detail()!.guestName) : ('common.loading' | translate)"
+    [subtitle]="detail() ? ('Room ' + detail()!.roomNumber + ' · ' + detail()!.roomType) : undefined"
+    size="xl"
+    (closed)="closeDetail()"
   >
-    <p class="text-sm text-slate-600 dark:text-slate-300">
-      {{ 'reservations.cancelPrompt' | translate }}
-      <span class="font-bold text-slate-900 dark:text-white">#{{ resToCancel?.id }} ({{ resToCancel?.guestName }})</span>?
-    </p>
+    @if (detail(); as d) {
+      <div class="flex flex-col gap-5">
+        <div class="flex flex-wrap items-center gap-2">
+          <ui-badge [variant]="statusVariant(d.status)" [dot]="true" [pulse]="d.status === 'CheckedIn'">{{ statusKey(d.status) | translate }}</ui-badge>
+          <span class="text-xs text-slate-400 font-mono">{{ d.invoiceNumber }}</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'reservations.guestDetails' | translate }}</p>
+            <dl class="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5 text-sm">
+              <dt class="text-slate-500">{{ 'reservations.guestName' | translate }}</dt><dd class="font-semibold text-slate-900 dark:text-white">{{ d.guestName }}</dd>
+              <dt class="text-slate-500">{{ 'reservations.guestPhone' | translate }}</dt><dd class="font-mono" dir="ltr">{{ d.guestPhone || '—' }}</dd>
+              <dt class="text-slate-500">{{ 'reservations.guestEmail' | translate }}</dt><dd class="break-all">{{ d.guestEmail || '—' }}</dd>
+              <dt class="text-slate-500">{{ 'reservations.guestIdNumber' | translate }}</dt><dd class="font-mono">{{ d.guestIdNumber || '—' }}</dd>
+            </dl>
+          </div>
+          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'reservations.stayDetails' | translate }}</p>
+            <dl class="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5 text-sm">
+              <dt class="text-slate-500">{{ 'reservations.checkInDate' | translate }}</dt><dd>{{ d.checkInDate }}</dd>
+              <dt class="text-slate-500">{{ 'reservations.checkOutDate' | translate }}</dt><dd>{{ d.checkOutDate }} · {{ d.nights }} {{ 'common.nights' | translate }}</dd>
+              <dt class="text-slate-500">{{ 'invoice.rate' | translate }}</dt><dd class="font-mono">{{ d.nightlyRate | money }} {{ 'common.perNight' | translate }}</dd>
+              <dt class="text-slate-500">{{ 'reservations.bookedBy' | translate }}</dt><dd>{{ d.createdByName }}</dd>
+              @if (d.checkedInAt) {
+                <dt class="text-slate-500">{{ 'stay.checkedInAt' | translate }}</dt><dd>{{ d.checkedInAt | date: 'medium' }}</dd>
+              }
+              @if (d.checkedOutAt) {
+                <dt class="text-slate-500">{{ 'stay.checkedOutAt' | translate }}</dt><dd>{{ d.checkedOutAt | date: 'medium' }}</dd>
+              }
+              @if (d.notes) {
+                <dt class="text-slate-500">{{ 'reservations.notes' | translate }}</dt><dd class="text-slate-700 dark:text-slate-300">{{ d.notes }}</dd>
+              }
+            </dl>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div class="grid grid-cols-3 divide-x rtl:divide-x-reverse divide-slate-200 dark:divide-slate-800 bg-slate-50 dark:bg-slate-900/60">
+            <div class="p-3 text-center">
+              <p class="text-[11px] uppercase tracking-wider text-slate-400">{{ 'invoice.total' | translate }}</p>
+              <p class="font-mono font-bold text-slate-900 dark:text-white">{{ d.totalAmount | money }}</p>
+            </div>
+            <div class="p-3 text-center">
+              <p class="text-[11px] uppercase tracking-wider text-slate-400">{{ 'reservations.paid' | translate }}</p>
+              <p class="font-mono font-bold text-emerald-600 dark:text-emerald-400">{{ d.amountPaid | money }}</p>
+            </div>
+            <div class="p-3 text-center">
+              <p class="text-[11px] uppercase tracking-wider text-slate-400">{{ 'payments.balanceDue' | translate }}</p>
+              <p class="font-mono font-bold" [class.text-amber-600]="d.balance > 0" [class.text-slate-900]="d.balance <= 0" [class.dark:text-white]="d.balance <= 0">{{ d.balance | money }}</p>
+            </div>
+          </div>
+
+          <div class="p-4">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'payments.title' | translate }}</p>
+            @if (d.payments.length === 0) {
+              <p class="text-sm text-slate-400">{{ 'payments.none' | translate }}</p>
+            } @else {
+              <table class="w-full text-sm">
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                  @for (p of d.payments; track p.id) {
+                    <tr>
+                      <td class="py-2 text-slate-500 whitespace-nowrap">{{ p.paidAt | date: 'mediumDate' }}</td>
+                      <td class="py-2">{{ methodKey(p.method) | translate }}@if (p.reference) {<span class="text-xs text-slate-400 font-mono ms-1.5">{{ p.reference }}</span>}</td>
+                      <td class="py-2 text-xs text-slate-400 hidden sm:table-cell">{{ p.receivedByName }}</td>
+                      <td class="py-2 text-end font-mono font-semibold">{{ p.amount | money }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
+            @if (canTakePayment(d)) {
+              <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-[1fr,1fr,1.2fr,auto] gap-3 items-end">
+                <ui-input [label]="'payments.amount' | translate" type="number" [min]="0" step="0.01" [(value)]="paymentAmount"></ui-input>
+                <ui-combobox [label]="'payments.method' | translate" [placeholder]="'payments.method' | translate" [options]="methodOptions()" [searchable]="false" [allowClear]="false" [(value)]="paymentMethod"></ui-combobox>
+                <ui-input [label]="'payments.reference' | translate" [placeholder]="'payments.referencePlaceholder' | translate" [(value)]="paymentReference"></ui-input>
+                <ui-button variant="success" (clicked)="recordPayment()" [loading]="working() && !pendingAction()">{{ 'payments.record' | translate }}</ui-button>
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (pendingPrompt(); as prompt) {
+          <div class="rounded-2xl border border-amber-300/70 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800/60 p-4 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-amber-900 dark:text-amber-200 font-medium">
+              {{ prompt.prompt | translate }}
+              @if (pendingAction() === 'cancel') {<span class="font-bold">{{ d.guestName }}?</span>}
+            </p>
+            <div class="flex gap-2">
+              <ui-button variant="secondary" size="sm" (clicked)="cancelAction()">{{ 'common.cancel' | translate }}</ui-button>
+              <ui-button [variant]="pendingAction() === 'cancel' || pendingAction() === 'noShow' ? 'danger' : 'primary'" size="sm" (clicked)="runAction()" [loading]="working()">
+                {{ prompt.title | translate }}
+              </ui-button>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="py-12 text-center text-sm text-slate-400">{{ 'common.loading' | translate }}</div>
+    }
 
     <div slot="footer">
-      <ui-button variant="secondary" (clicked)="closeCancelModal()">
-        {{ 'common.cancel' | translate }}
-      </ui-button>
-      <ui-button variant="danger" (clicked)="executeCancel()" [loading]="cancelling()">
-        {{ 'common.confirm' | translate }}
-      </ui-button>
+      @if (detail(); as d) {
+        <a [routerLink]="['/reservations', d.id, 'invoice']" class="me-auto inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:text-primary-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          {{ 'stay.invoice' | translate }}
+        </a>
+        @if (canCancel(d)) {
+          <ui-button variant="ghost" (clicked)="askAction('cancel')">{{ 'reservations.cancelReservation' | translate }}</ui-button>
+        }
+        @if (canMarkNoShow(d)) {
+          <ui-button variant="outline" (clicked)="askAction('noShow')">{{ 'stay.markNoShow' | translate }}</ui-button>
+        }
+        @if (canCheckIn(d)) {
+          <ui-button variant="success" (clicked)="askAction('checkIn')">{{ 'stay.checkIn' | translate }}</ui-button>
+        }
+        @if (canCheckOut(d)) {
+          <ui-button variant="primary" (clicked)="askAction('checkOut')">{{ 'stay.checkOut' | translate }}</ui-button>
+        }
+      }
     </div>
   </ui-modal>
 </div>

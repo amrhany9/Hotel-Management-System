@@ -175,3 +175,32 @@
     border: 1px solid rgba(51, 65, 85, 0.8);
   }
 }
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .bg-ambient {
+    background: #fff !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  app-toast {
+    display: none !important;
+  }
+
+  .invoice-sheet {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}

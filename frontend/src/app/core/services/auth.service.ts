@@ -15,11 +15,12 @@ export class AuthService {
   private readonly tokenKey = 'hotel_jwt_token';
   private readonly userKey = 'hotel_user_info';
 
-  private tokenSignal = signal<string | null>(this.getStoredToken());
   private userSignal = signal<AuthResponse | null>(this.getStoredUser());
+  private tokenSignal = signal<string | null>(this.userSignal() ? this.getStoredToken() : null);
 
   public isAuthenticated = computed(() => !!this.tokenSignal());
   public currentUser = computed(() => this.userSignal());
+  public isAdmin = computed(() => this.userSignal()?.role === 'Admin');
 
   private getStoredToken(): string | null {
     try {
@@ -32,7 +33,8 @@ export class AuthService {
   private getStoredUser(): AuthResponse | null {
     try {
       const data = localStorage.getItem(this.userKey);
-      return data ? JSON.parse(data) : null;
+      const user: AuthResponse | null = data ? JSON.parse(data) : null;
+      return user?.role ? user : null;
     } catch {
       return null;
     }
@@ -46,10 +48,6 @@ export class AuthService {
     return this.http.post<AuthResponse>(API_ENDPOINTS.auth.login, credentials).pipe(
       tap(res => this.setSession(res))
     );
-  }
-
-  register(data: { fullName: string; email: string; password: string }): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(API_ENDPOINTS.auth.register, data);
   }
 
   logout(): void {

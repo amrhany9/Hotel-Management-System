@@ -10,12 +10,16 @@
       </p>
     </div>
 
-    <ui-button variant="primary" size="md" (clicked)="openCreateModal()">
-      <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-      </svg>
-      <span>{{ 'rooms.addRoom' | translate }}</span>
-    </ui-button>
+    @if (authService.isAdmin()) {
+      <ui-button variant="primary" size="md" (clicked)="openCreateModal()">
+        <svg slot="prefix" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>{{ 'rooms.addRoom' | translate }}</span>
+      </ui-button>
+    } @else {
+      <p class="text-xs text-slate-400">{{ 'rooms.adminOnly' | translate }}</p>
+    }
   </div>
 
   <!-- Filters Card -->
@@ -108,7 +112,7 @@
               </td>
               <td class="data-table-cell w-56">
                 <span class="font-mono font-bold text-emerald-700 dark:text-emerald-400 text-base">
-                  &#36;{{ room.pricePerNight | number: '1.2-2' }}
+                  {{ room.pricePerNight | money }}
                 </span>
                 <span class="text-xs font-normal text-slate-400 ms-1.5">{{ 'common.perNight' | translate }}</span>
               </td>
@@ -119,10 +123,11 @@
                   [pulse]="room.isAvailable"
                   size="sm"
                 >
-                  {{ (room.isAvailable ? 'rooms.available' : 'rooms.occupied') | translate }}
+                  {{ (room.isAvailable ? 'rooms.available' : 'rooms.outOfService') | translate }}
                 </ui-badge>
               </td>
               <td class="data-table-cell text-end">
+                @if (authService.isAdmin()) {
                 <div class="inline-flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200/60 dark:border-slate-700/60 gap-0.5">
                   <ui-button variant="ghost" size="xs" (clicked)="openEditModal(room)" title="Edit">
                     <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,6 +140,9 @@
                     </svg>
                   </ui-button>
                 </div>
+                } @else {
+                  <span class="text-xs text-slate-400">—</span>
+                }
               </td>
             </tr>
           } @empty {

@@ -1,0 +1,110 @@
+<div class="max-w-3xl mx-auto flex flex-col gap-4 animate-in fade-in duration-300">
+  <div class="flex items-center justify-between print:hidden">
+    <a routerLink="/reservations" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary-600">
+      <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+      {{ 'invoice.back' | translate }}
+    </a>
+    <button
+      type="button"
+      (click)="print()"
+      [disabled]="!reservation()"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-500 transition cursor-pointer disabled:opacity-50"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+      {{ 'invoice.print' | translate }}
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">{{ 'common.noData' | translate }}</div>
+  }
+
+  @if (reservation(); as r) {
+    <article class="invoice-sheet bg-white text-slate-900 rounded-2xl border border-slate-200 shadow-card p-8 sm:p-10">
+      <header class="flex flex-wrap justify-between gap-6 pb-6 border-b border-slate-200">
+        <div>
+          <p class="text-xl font-extrabold tracking-tight">{{ settings().hotelName }}</p>
+          <p class="text-xs text-slate-500 mt-1 max-w-xs">{{ settings().address }}</p>
+          <p class="text-xs text-slate-500 mt-0.5" dir="ltr">{{ settings().phone }} · {{ settings().email }}</p>
+        </div>
+        <div class="text-end">
+          <p class="text-2xl font-black uppercase tracking-wider text-primary-700">
+            {{ (isFinal() ? 'invoice.title' : 'invoice.proforma') | translate }}
+          </p>
+          <p class="text-sm mt-1"><span class="text-slate-500">{{ 'invoice.number' | translate }}</span> <span class="font-mono font-semibold">{{ r.invoiceNumber }}</span></p>
+          <p class="text-sm"><span class="text-slate-500">{{ 'invoice.issued' | translate }}</span> {{ issuedOn | date: 'mediumDate' }}</p>
+          <p class="text-xs mt-1 text-slate-500">{{ statusKey(r.status) | translate }}</p>
+        </div>
+      </header>
+
+      <section class="grid grid-cols-1 sm:grid-cols-2 gap-6 py-6">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ 'invoice.billTo' | translate }}</p>
+          <p class="font-bold mt-1">{{ r.guestName }}</p>
+          <p class="text-sm text-slate-600 font-mono" dir="ltr">{{ r.guestPhone }}</p>
+          @if (r.guestEmail) {<p class="text-sm text-slate-600">{{ r.guestEmail }}</p>}
+          @if (r.guestIdNumber) {<p class="text-sm text-slate-600">{{ 'reservations.guestIdNumber' | translate }}: <span class="font-mono">{{ r.guestIdNumber }}</span></p>}
+        </div>
+        <div class="sm:text-end">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ 'invoice.stay' | translate }}</p>
+          <p class="font-bold mt-1">Room {{ r.roomNumber }} · {{ r.roomType }}</p>
+          <p class="text-sm text-slate-600">{{ r.checkInDate }} → {{ r.checkOutDate }}</p>
+          <p class="text-sm text-slate-600">{{ r.nights }} {{ 'common.nights' | translate }}</p>
+        </div>
+      </section>
+
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-y border-slate-200 text-[11px] uppercase tracking-wider text-slate-500">
+            <th class="py-2 text-start font-bold">{{ 'invoice.description' | translate }}</th>
+            <th class="py-2 text-end font-bold">{{ 'invoice.quantity' | translate }}</th>
+            <th class="py-2 text-end font-bold">{{ 'invoice.rate' | translate }}</th>
+            <th class="py-2 text-end font-bold">{{ 'invoice.amount' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-slate-100">
+            <td class="py-3">{{ lineDescription() }}</td>
+            <td class="py-3 text-end font-mono">{{ r.nights }}</td>
+            <td class="py-3 text-end font-mono">{{ r.nightlyRate | money }}</td>
+            <td class="py-3 text-end font-mono font-semibold">{{ r.totalAmount | money }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="flex justify-end mt-4">
+        <dl class="w-full sm:w-72 text-sm">
+          <div class="flex justify-between py-1.5"><dt class="text-slate-500">{{ 'invoice.total' | translate }}</dt><dd class="font-mono font-semibold">{{ r.totalAmount | money }}</dd></div>
+          <div class="flex justify-between py-1.5"><dt class="text-slate-500">{{ 'invoice.totalPaid' | translate }}</dt><dd class="font-mono text-emerald-700">− {{ r.amountPaid | money }}</dd></div>
+          <div class="flex justify-between py-2 mt-1 border-t-2 border-slate-900">
+            <dt class="font-bold">{{ 'invoice.balanceDue' | translate }}</dt>
+            <dd class="font-mono font-black text-lg">{{ (r.status === 'Cancelled' || r.status === 'NoShow' ? 0 : r.balance) | money }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      @if (r.payments.length > 0) {
+        <section class="mt-8">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'invoice.payments' | translate }}</p>
+          <table class="w-full text-sm">
+            <tbody class="divide-y divide-slate-100">
+              @for (p of r.payments; track p.id) {
+                <tr>
+                  <td class="py-2 text-slate-600">{{ p.paidAt | date: 'mediumDate' }}</td>
+                  <td class="py-2">{{ methodKey(p.method) | translate }}@if (p.reference) {<span class="text-xs text-slate-400 font-mono ms-1.5">{{ p.reference }}</span>}</td>
+                  <td class="py-2 text-end font-mono">{{ p.amount | money }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      }
+
+      <footer class="mt-10 pt-6 border-t border-slate-200 text-center text-xs text-slate-500">
+        {{ 'invoice.thankYou' | translate }} · {{ settings().hotelName }}
+      </footer>
+    </article>
+  } @else if (!error()) {
+    <div class="py-16 text-center text-sm text-slate-400">{{ 'common.loading' | translate }}</div>
+  }
+</div>
