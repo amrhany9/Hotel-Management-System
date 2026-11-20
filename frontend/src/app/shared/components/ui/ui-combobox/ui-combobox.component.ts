@@ -1,4 +1,15 @@
-import { Component, Input, Output, EventEmitter, ElementRef, HostListener, signal, computed } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  ElementRef,
+  HostListener,
+  signal,
+  computed,
+  viewChild,
+  afterRenderEffect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
@@ -10,6 +21,9 @@ export interface ComboboxOption {
   badge?: string;
 }
 
+const PANEL_GAP = 8;
+const VIEWPORT_MARGIN = 8;
+
 @Component({
   selector: 'ui-combobox',
   standalone: true,
@@ -18,8 +32,20 @@ export interface ComboboxOption {
   host: { class: 'block w-full' },
 })
 export class UiComboboxComponent {
-  @Input() options: ComboboxOption[] = [];
-  @Input() value: any = null;
+  @Input() set options(options: ComboboxOption[]) {
+    this.optionsState.set(options ?? []);
+  }
+  get options(): ComboboxOption[] {
+    return this.optionsState();
+  }
+
+  @Input() set value(value: any) {
+    this.valueState.set(value);
+  }
+  get value(): any {
+    return this.valueState();
+  }
+
   @Input() label?: string;
   @Input() labelStyle: 'micro' | 'normal' = 'micro';
   @Input() placeholder = '';
@@ -36,6 +62,12 @@ export class UiComboboxComponent {
   isOpen = signal(false);
   searchQuery = signal('');
 
+  private optionsState = signal<ComboboxOption[]>([]);
+  private valueState = signal<any>(null);
+
+  private trigger = viewChild.required<ElementRef<HTMLElement>>('trigger');
+  private panel = viewChild<ElementRef<HTMLElement>>('panel');
+
   selectedOption = computed(() => {
     return this.options.find((o) => o.value === this.value) || null;
   });
@@ -50,13 +82,39 @@ export class UiComboboxComponent {
     );
   });
 
-  constructor(private elementRef: ElementRef) {}
+  constructor(private elementRef: ElementRef) {
+    afterRenderEffect((onCleanup) => {
+      const panel = this.panel()?.nativeElement;
+      this.filteredOptions();
+      if (!panel) return;
+
+      if (panel.parentElement !== document.body) {
+        document.body.appendChild(panel);
+      }
+
+      const reposition = () => this.positionPanel(panel);
+      reposition();
+      window.addEventListener('scroll', reposition, true);
+      window.addEventListener('resize', reposition);
+      onCleanup(() => {
+        window.removeEventListener('scroll', reposition, true);
+        window.removeEventListener('resize', reposition);
+      });
+    });
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.elementRef.nativeElement.contains(event.target)) {
+    const target = event.target as Node;
+    const insidePanel = this.panel()?.nativeElement.contains(target) ?? false;
+    if (!this.elementRef.nativeElement.contains(target) && !insidePanel) {
       this.isOpen.set(false);
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.isOpen.set(false);
   }
 
   toggleOpen(): void {
@@ -80,5 +138,22 @@ export class UiComboboxComponent {
     this.valueChange.emit(null);
     this.selectionChange.emit(null);
     this.searchQuery.set('');
+  }
+
+  private positionPanel(panel: HTMLElement): void {
+    const rect = this.trigger().nativeElement.getBoundingClientRect();
+    const height = panel.offsetHeight;
+    const spaceBelow = window.innerHeight - rect.bottom - PANEL_GAP - VIEWPORT_MARGIN;
+    const spaceAbove = rect.top - PANEL_GAP - VIEWPORT_MARGIN;
+    const openUpward = height > spaceBelow && spaceAbove > spaceBelow;
+
+    const top = openUpward
+      ? Math.max(VIEWPORT_MARGIN, rect.top - PANEL_GAP - height)
+      : rect.bottom + PANEL_GAP;
+
+    panel.style.left = `${rect.left}px`;
+    panel.style.width = `${rect.width}px`;
+    panel.style.top = `${top}px`;
+    panel.style.visibility = 'visible';
   }
 }

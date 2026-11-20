@@ -20,6 +20,7 @@
   }
 
   <div
+    #trigger
     class="w-full min-h-[44px] h-11 flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 text-sm cursor-pointer shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition focus-within:ring-2 focus-within:ring-primary-500/25 focus-within:border-primary-500 select-none"
     (click)="toggleOpen()"
     [class.ring-2]="isOpen()"
@@ -68,10 +69,11 @@
     </div>
   </div>
 
-  <!-- Dropdown Menu -->
   @if (isOpen()) {
     <div
-      class="absolute z-[70] w-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-float overflow-hidden animate-slide-down"
+      #panel
+      style="visibility: hidden"
+      class="fixed z-[70] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-float overflow-hidden animate-slide-down"
     >
       @if (searchable) {
         <div class="p-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50">
