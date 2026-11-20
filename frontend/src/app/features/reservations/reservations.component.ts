@@ -17,6 +17,7 @@ import {
 } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { DisplayDatePipe } from '../../shared/pipes/display-date.pipe';
 import { RESERVATION_STATUSES, statusKey, statusVariant, todayIso } from '../../shared/reservation-status';
 import {
   ComboboxOption,
@@ -46,6 +47,7 @@ const ACTION_PROMPTS: Record<StayAction, { title: string; prompt: string }> = {
     RouterLink,
     TranslatePipe,
     MoneyPipe,
+    DisplayDatePipe,
     UiButtonComponent,
     UiCardComponent,
     UiBadgeComponent,
@@ -93,15 +95,20 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     ];
   });
 
-  roomOptions = computed<ComboboxOption[]>(() =>
-    this.rooms()
+  private readonly money = new MoneyPipe();
+
+  roomOptions = computed<ComboboxOption[]>(() => {
+    this.translationService.currentLang();
+    const room = this.translationService.translate('common.room');
+    const perNight = this.translationService.translate('common.perNight');
+    return this.rooms()
       .filter((r) => r.isAvailable)
       .map((r) => ({
-        label: `Room ${r.roomNumber} (${r.roomType})`,
+        label: `${room} ${r.roomNumber} (${r.roomType})`,
         value: r.id,
-        subtext: `${r.pricePerNight}/night`,
-      }))
-  );
+        subtext: `${this.money.transform(r.pricePerNight)} ${perNight}`,
+      }));
+  });
 
   get activeFilterCount(): number {
     return [this.filterGuest.trim(), this.filterRoomNumber.trim(), this.filterStatus, this.filterCheckIn].filter(Boolean).length;
@@ -164,7 +171,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading.set(false);
-        this.notificationService.error('Failed to load reservations');
+        this.notificationService.error(this.t('toast.loadFailed'));
       },
     });
   }
@@ -172,7 +179,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
   loadRooms(): void {
     this.roomService.getRooms().subscribe({
       next: (list) => this.rooms.set(list),
-      error: () => this.notificationService.error('Failed to load rooms'),
+      error: () => this.notificationService.error(this.t('toast.loadFailed')),
     });
   }
 
@@ -284,11 +291,11 @@ export class ReservationsComponent implements OnInit, OnDestroy {
 
   createReservation(): void {
     if (!this.newGuestName.trim() || !this.newGuestPhone.trim() || !this.newRoomId || !this.newCheckIn || !this.newCheckOut) {
-      this.notificationService.warning('Please complete the guest name, phone, room and dates');
+      this.notificationService.warning(this.t('toast.completeBooking'));
       return;
     }
     if (this.newCheckOut <= this.newCheckIn) {
-      this.notificationService.warning('Check-out date must be after check-in date');
+      this.notificationService.warning(this.t('toast.checkoutAfterCheckin'));
       return;
     }
 
@@ -313,7 +320,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.submitting.set(false);
-        this.notificationService.error(this.errorMessage(err, 'Failed to create reservation'));
+        this.notificationService.error(this.errorMessage(err));
       },
     });
   }
@@ -334,7 +341,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
   private refreshDetail(id: number): void {
     this.reservationService.getReservationById(id).subscribe({
       next: (d) => this.setDetail(d),
-      error: () => this.notificationService.error('Failed to load reservation'),
+      error: () => this.notificationService.error(this.t('toast.loadFailed')),
     });
   }
 
@@ -376,7 +383,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.working.set(false);
         this.pendingAction.set(null);
-        this.notificationService.error(this.errorMessage(err, 'The action could not be completed'));
+        this.notificationService.error(this.errorMessage(err));
       },
     });
   }
@@ -385,7 +392,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     const d = this.detail();
     const amount = Number(this.paymentAmount);
     if (!d || !amount || amount <= 0) {
-      this.notificationService.warning('Enter a payment amount greater than zero');
+      this.notificationService.warning(this.t('toast.enterAmount'));
       return;
     }
 
@@ -400,7 +407,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.working.set(false);
-          this.notificationService.error(this.errorMessage(err, 'The payment could not be recorded'));
+          this.notificationService.error(this.errorMessage(err));
         },
       });
   }
@@ -409,12 +416,16 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     return method === 'BankTransfer' ? 'payments.bankTransfer' : method === 'Card' ? 'payments.card' : 'payments.cash';
   }
 
-  private errorMessage(err: any, fallback: string): string {
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.translationService.translate(key, params);
+  }
+
+  private errorMessage(err: any): string {
     const errors = err?.error?.errors;
     if (errors) {
       const first = Object.values(errors).flat()[0];
       if (typeof first === 'string') return first;
     }
-    return err?.error?.detail || fallback;
+    return err?.error?.detail || this.t('toast.genericError');
   }
 }

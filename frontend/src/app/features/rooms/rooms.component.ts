@@ -8,7 +8,9 @@ import { NotificationService } from '../../core/services/notification.service';
 import { Room, CreateRoomRequest, UpdateRoomRequest } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { roomTypeVariant } from '../../shared/room-type';
 import { AuthService } from '../../core/services/auth.service';
+import { TranslationService } from '../../core/services/translation.service';
 import {
   UiButtonComponent,
   UiCardComponent,
@@ -41,6 +43,11 @@ export class RoomsComponent implements OnInit, OnDestroy {
   private signalRService = inject(SignalRService);
   private notificationService = inject(NotificationService);
   authService = inject(AuthService);
+  private translation = inject(TranslationService);
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.translation.translate(key, params);
+  }
 
   rooms = signal<Room[]>([]);
   filteredRooms = signal<Room[]>([]);
@@ -81,13 +88,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
     return count;
   }
 
-  getRoomTypeVariant(type: string): 'info' | 'success' | 'warning' | 'neutral' {
-    const t = type.toLowerCase();
-    if (t.includes('presidential') || t.includes('family')) return 'warning';
-    if (t.includes('suite')) return 'info';
-    if (t.includes('deluxe')) return 'success';
-    return 'neutral';
-  }
+  readonly getRoomTypeVariant = roomTypeVariant;
 
   private subs: Subscription[] = [];
 
@@ -112,7 +113,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
         this.applyFilters();
       },
       error: (err) => {
-        this.notificationService.error('Failed to load rooms');
+        this.notificationService.error(this.t('toast.loadFailed'));
       },
     });
   }
@@ -129,7 +130,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (available) => this.filteredRooms.set(available),
           error: (err) => {
-            this.notificationService.error(err.error?.detail || 'Date availability check failed');
+            this.notificationService.error(err.error?.detail || this.t('toast.genericError'));
           },
         });
     } else {
@@ -176,7 +177,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
 
   saveRoom(): void {
     if (!this.modalRoomNumber || !this.modalRoomType || this.modalPrice <= 0) {
-      this.notificationService.warning('Please enter valid room details');
+      this.notificationService.warning(this.t('toast.completeFields'));
       return;
     }
 
@@ -194,13 +195,13 @@ export class RoomsComponent implements OnInit, OnDestroy {
       this.roomService.updateRoom(this.editingRoomId, updateData).subscribe({
         next: () => {
           this.saving.set(false);
-          this.notificationService.success(`Room ${updateData.roomNumber} updated`);
+          this.notificationService.success(this.t('toast.roomUpdated', { room: updateData.roomNumber }));
           this.closeModal();
           this.loadRooms();
         },
         error: (err) => {
           this.saving.set(false);
-          this.notificationService.error(err.error?.detail || 'Failed to update room');
+          this.notificationService.error(err.error?.detail || this.t('toast.genericError'));
         },
       });
     } else {
@@ -214,13 +215,13 @@ export class RoomsComponent implements OnInit, OnDestroy {
       this.roomService.createRoom(createData).subscribe({
         next: (created) => {
           this.saving.set(false);
-          this.notificationService.success(`Room ${created.roomNumber} created`);
+          this.notificationService.success(this.t('toast.roomCreated', { room: created.roomNumber }));
           this.closeModal();
           this.loadRooms();
         },
         error: (err) => {
           this.saving.set(false);
-          this.notificationService.error(err.error?.detail || 'Failed to create room');
+          this.notificationService.error(err.error?.detail || this.t('toast.genericError'));
         },
       });
     }
@@ -243,7 +244,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
     this.roomService.deleteRoom(this.roomToDelete.id).subscribe({
       next: () => {
         this.deleting.set(false);
-        this.notificationService.success(`Room ${this.roomToDelete?.roomNumber} deleted`);
+        this.notificationService.success(this.t('toast.roomDeleted', { room: this.roomToDelete?.roomNumber ?? '' }));
         this.closeDeleteModal();
         this.loadRooms();
       },

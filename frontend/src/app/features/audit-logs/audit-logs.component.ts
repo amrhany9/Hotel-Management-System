@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AuditLogService } from '../../core/services/api.services';
 import { AuditLog } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { DisplayDatePipe } from '../../shared/pipes/display-date.pipe';
 import {
   UiButtonComponent,
   UiCardComponent,
@@ -19,6 +20,7 @@ import {
     CommonModule,
     FormsModule,
     TranslatePipe,
+    DisplayDatePipe,
     UiButtonComponent,
     UiCardComponent,
     UiBadgeComponent,
@@ -67,14 +69,46 @@ export class AuditLogsComponent implements OnInit {
   getActionVariant(action: string): BadgeVariant {
     switch (action.toLowerCase()) {
       case 'created':
+      case 'checked in':
+      case 'activated':
         return 'success';
       case 'updated':
+      case 'no-show':
         return 'warning';
       case 'deleted':
       case 'cancelled':
+      case 'deactivated':
         return 'danger';
+      case 'checked out':
+        return 'neutral';
       default:
         return 'info';
     }
+  }
+
+  entityKey(entity: string): string {
+    const keys: Record<string, string> = {
+      reservation: 'auditLogs.entReservation',
+      room: 'auditLogs.entRoom',
+      user: 'auditLogs.entUser',
+      system: 'auditLogs.entSystem',
+    };
+    return keys[entity.toLowerCase()] ?? entity;
+  }
+
+  actionKey(action: string): string {
+    const keys: Record<string, string> = {
+      created: 'auditLogs.actCreated',
+      updated: 'auditLogs.actUpdated',
+      deleted: 'auditLogs.actDeleted',
+      cancelled: 'auditLogs.actCancelled',
+      'checked in': 'auditLogs.actCheckedIn',
+      'checked out': 'auditLogs.actCheckedOut',
+      payment: 'auditLogs.actPayment',
+      'no-show': 'auditLogs.actNoShow',
+      activated: 'auditLogs.actActivated',
+      deactivated: 'auditLogs.actDeactivated',
+    };
+    return keys[action.toLowerCase()] ?? action;
   }
 }

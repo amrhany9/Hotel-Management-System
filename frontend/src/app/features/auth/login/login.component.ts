@@ -52,7 +52,7 @@ export class LoginComponent {
 
   onSubmit(): void {
     if (!this.email || !this.password) {
-      this.notificationService.warning('Please enter both email and password');
+      this.notificationService.warning(this.translationService.translate('toast.enterCredentials'));
       return;
     }
 
@@ -60,14 +60,14 @@ export class LoginComponent {
     this.authService.login({ email: this.email, password: this.password }).subscribe({
       next: (res) => {
         this.loading.set(false);
-        this.notificationService.success(`Welcome, ${res.fullName}`);
+        this.notificationService.success(this.translationService.translate('toast.welcome', { name: res.fullName }));
         this.signalRService.startConnection();
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.loading.set(false);
         const message = err.error?.errors ? Object.values(err.error.errors).flat()[0] : err.error?.detail;
-        this.notificationService.error((message as string) || 'Invalid email or password');
+        this.notificationService.error((message as string) || this.translationService.translate('toast.invalidLogin'));
       },
     });
   }

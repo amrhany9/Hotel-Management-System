@@ -41,7 +41,7 @@
                   {{ (u.isActive ? 'common.active' : 'common.inactive') | translate }}
                 </ui-badge>
               </td>
-              <td class="data-table-cell text-xs text-slate-500">{{ u.createdAt | date: 'mediumDate' }}</td>
+              <td class="data-table-cell text-xs text-slate-500">{{ u.createdAt | appDate }}</td>
               <td class="data-table-cell text-end">
                 @if (!isSelf(u)) {
                   <ui-button [variant]="u.isActive ? 'outline' : 'success'" size="xs" [loading]="togglingId() === u.id" (clicked)="toggle(u)">

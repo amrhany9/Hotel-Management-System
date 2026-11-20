@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './ui-stat-card.component.html',
-  host: { class: 'block w-full' },
+  host: { class: 'block w-full h-full' },
 })
 export class UiStatCardComponent {
   @Input() label = '';

@@ -45,7 +45,7 @@ export class TranslationService {
   /**
    * Translates a dot-notated key e.g. "nav.dashboard" or "common.save"
    */
-  translate(key: string): string {
+  translate(key: string, params?: Record<string, string | number>): string {
     const parts = key.split('.');
     let current: any = this.currentTranslations();
 
@@ -53,11 +53,17 @@ export class TranslationService {
       if (current && typeof current === 'object' && part in current) {
         current = current[part];
       } else {
-        return key; // fallback to key itself if not found
+        return key;
       }
     }
 
-    return typeof current === 'string' ? current : key;
+    if (typeof current !== 'string') {
+      return key;
+    }
+
+    return params
+      ? current.replace(/\{(\w+)\}/g, (match: string, name: string) => (name in params ? String(params[name]) : match))
+      : current;
   }
 
   private getInitialLanguage(): Language {

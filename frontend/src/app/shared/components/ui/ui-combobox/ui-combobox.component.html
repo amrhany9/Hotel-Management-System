@@ -40,7 +40,7 @@
           }
         </div>
       } @else {
-        <span class="text-slate-400 dark:text-slate-500">{{ placeholder }}</span>
+        <span class="text-slate-400 dark:text-slate-500">{{ placeholder || ('common.select' | translate) }}</span>
       }
     </div>
 
@@ -83,7 +83,7 @@
               type="text"
               [(ngModel)]="searchQuery"
               (click)="$event.stopPropagation()"
-              [placeholder]="searchPlaceholder"
+              [placeholder]="searchPlaceholder || ('common.search' | translate)"
               class="w-full ps-8 pe-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-slate-900 dark:text-slate-100"
             />
           </div>
@@ -118,7 +118,7 @@
             <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
-            <span>{{ emptyMessage }}</span>
+            <span>{{ emptyMessage || ('common.noOptions' | translate) }}</span>
           </div>
         }
       </div>

@@ -7,6 +7,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { StaffUser, UserRole } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { DisplayDatePipe } from '../../shared/pipes/display-date.pipe';
 import {
   ComboboxOption,
   UiBadgeComponent,
@@ -24,6 +25,7 @@ import {
     CommonModule,
     FormsModule,
     TranslatePipe,
+    DisplayDatePipe,
     UiBadgeComponent,
     UiButtonComponent,
     UiCardComponent,
@@ -70,7 +72,7 @@ export class StaffComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        this.notificationService.error('Failed to load staff accounts');
+        this.notificationService.error(this.translationService.translate('toast.loadFailed'));
       },
     });
   }
@@ -97,7 +99,7 @@ export class StaffComponent implements OnInit {
 
   create(): void {
     if (!this.fullName.trim() || !this.email.trim() || !this.password) {
-      this.notificationService.warning('Please complete all fields');
+      this.notificationService.warning(this.translationService.translate('toast.completeFields'));
       return;
     }
     this.saving.set(true);
@@ -107,7 +109,7 @@ export class StaffComponent implements OnInit {
         next: (user) => {
           this.saving.set(false);
           this.closeModal();
-          this.notificationService.success(`${user.fullName} can now sign in`);
+          this.notificationService.success(this.translationService.translate('toast.staffCreated', { name: user.fullName }));
           this.load();
         },
         error: (err) => {
@@ -137,6 +139,6 @@ export class StaffComponent implements OnInit {
       const first = Object.values(errors).flat()[0];
       if (typeof first === 'string') return first;
     }
-    return err?.error?.detail || 'Something went wrong';
+    return err?.error?.detail || this.translationService.translate('toast.genericError');
   }
 }

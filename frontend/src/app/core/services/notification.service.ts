@@ -1,14 +1,16 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { ToastMessage } from '../models/models';
+import { TranslationService } from './translation.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class NotificationService {
+  private translation = inject(TranslationService);
   private toastsSignal = signal<ToastMessage[]>([]);
   public toasts = this.toastsSignal.asReadonly();
 
-  show(message: string, title = 'Notification', type: 'info' | 'success' | 'warning' | 'error' = 'info', duration = 5000): void {
+  show(message: string, title: string, type: 'info' | 'success' | 'warning' | 'error' = 'info', duration = 5000): void {
     const toast: ToastMessage = {
       id: Math.random().toString(36).substring(2, 9),
       title,
@@ -26,20 +28,20 @@ export class NotificationService {
     }
   }
 
-  success(message: string, title = 'Success'): void {
-    this.show(message, title, 'success');
+  success(message: string, title?: string): void {
+    this.show(message, title ?? this.translation.translate('toast.titleSuccess'), 'success');
   }
 
-  error(message: string, title = 'Error'): void {
-    this.show(message, title, 'error', 7000);
+  error(message: string, title?: string): void {
+    this.show(message, title ?? this.translation.translate('toast.titleError'), 'error', 7000);
   }
 
-  info(message: string, title = 'Information'): void {
-    this.show(message, title, 'info');
+  info(message: string, title?: string): void {
+    this.show(message, title ?? this.translation.translate('toast.titleInfo'), 'info');
   }
 
-  warning(message: string, title = 'Notice'): void {
-    this.show(message, title, 'warning');
+  warning(message: string, title?: string): void {
+    this.show(message, title ?? this.translation.translate('toast.titleNotice'), 'warning');
   }
 
   remove(id: string): void {

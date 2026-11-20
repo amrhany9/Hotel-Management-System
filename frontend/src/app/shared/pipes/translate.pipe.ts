@@ -9,8 +9,8 @@ import { TranslationService } from '../../core/services/translation.service';
 export class TranslatePipe implements PipeTransform {
   private translationService = inject(TranslationService);
 
-  transform(key: string): string {
+  transform(key: string, params?: Record<string, string | number>): string {
     if (!key) return '';
-    return this.translationService.translate(key);
+    return this.translationService.translate(key, params);
   }
 }

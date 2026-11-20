@@ -5,7 +5,9 @@ import { ReportService } from '../../core/services/api.services';
 import { TopRoomReport, RevenueReport, OccupancyReportItem } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { roomTypeVariant } from '../../shared/room-type';
 import {
+  UiBadgeComponent,
   UiButtonComponent,
   UiCardComponent,
   UiInputComponent,
@@ -20,6 +22,7 @@ import {
     FormsModule,
     TranslatePipe,
     MoneyPipe,
+    UiBadgeComponent,
     UiButtonComponent,
     UiCardComponent,
     UiInputComponent,
@@ -28,6 +31,8 @@ import {
   templateUrl: './reports.component.html',
 })
 export class ReportsComponent implements OnInit {
+  readonly roomTypeVariant = roomTypeVariant;
+
   private reportService = inject(ReportService);
 
   activeTab: 'top-rooms' | 'revenue' | 'occupancy' = 'top-rooms';

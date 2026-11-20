@@ -7,12 +7,13 @@ import { TranslationService } from '../../core/services/translation.service';
 import { PaymentMethod, ReservationDetail } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { DisplayDatePipe } from '../../shared/pipes/display-date.pipe';
 import { statusKey } from '../../shared/reservation-status';
 
 @Component({
   selector: 'app-invoice',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe, MoneyPipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, MoneyPipe, DisplayDatePipe],
   templateUrl: './invoice.component.html',
 })
 export class InvoiceComponent implements OnInit {

@@ -17,7 +17,7 @@ export class UiBadgeComponent {
 
   get badgeClasses(): string {
     const base =
-      'inline-flex items-center font-semibold rounded-md border leading-none transition-colors select-none';
+      'inline-flex items-center font-semibold rounded-md border leading-none whitespace-nowrap transition-colors select-none';
 
     const sizes = {
       sm: 'px-2.5 py-0.5 text-[11px] gap-1.5',

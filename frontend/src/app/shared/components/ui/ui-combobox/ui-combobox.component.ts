@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, ElementRef, HostListener, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
 
 export interface ComboboxOption {
   label: string;
@@ -12,7 +13,7 @@ export interface ComboboxOption {
 @Component({
   selector: 'ui-combobox',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './ui-combobox.component.html',
   host: { class: 'block w-full' },
 })
@@ -21,9 +22,9 @@ export class UiComboboxComponent {
   @Input() value: any = null;
   @Input() label?: string;
   @Input() labelStyle: 'micro' | 'normal' = 'micro';
-  @Input() placeholder = 'Select an option...';
-  @Input() searchPlaceholder = 'Search...';
-  @Input() emptyMessage = 'No options found';
+  @Input() placeholder = '';
+  @Input() searchPlaceholder = '';
+  @Input() emptyMessage = '';
   @Input() required = false;
   @Input() disabled = false;
   @Input() searchable = true;

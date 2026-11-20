@@ -4,20 +4,23 @@ import { Subject, debounceTime, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { GuestService } from '../../core/services/guest.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { TranslationService } from '../../core/services/translation.service';
 import { Guest } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { DisplayDatePipe } from '../../shared/pipes/display-date.pipe';
 import { UiCardComponent, UiInputComponent } from '../../shared/components/ui';
 
 @Component({
   selector: 'app-guests',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, MoneyPipe, UiCardComponent, UiInputComponent],
+  imports: [CommonModule, TranslatePipe, MoneyPipe, DisplayDatePipe, UiCardComponent, UiInputComponent],
   templateUrl: './guests.component.html',
 })
 export class GuestsComponent implements OnInit {
   private guestService = inject(GuestService);
   private notificationService = inject(NotificationService);
+  private translation = inject(TranslationService);
 
   guests = signal<Guest[]>([]);
   loading = signal(true);
@@ -39,7 +42,7 @@ export class GuestsComponent implements OnInit {
         },
         error: () => {
           this.loading.set(false);
-          this.notificationService.error('Failed to load guests');
+          this.notificationService.error(this.translation.translate('toast.loadFailed'));
         },
       });
   }

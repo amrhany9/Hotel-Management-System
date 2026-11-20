@@ -4,6 +4,7 @@ import { Subject } from 'rxjs';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
+import { TranslationService } from './translation.service';
 import { Reservation, ReservationUpdatedEvent, Room } from '../models/models';
 
 @Injectable({
@@ -12,6 +13,7 @@ import { Reservation, ReservationUpdatedEvent, Room } from '../models/models';
 export class SignalRService {
   private authService = inject(AuthService);
   private notificationService = inject(NotificationService);
+  private translation = inject(TranslationService);
 
   private hubConnection: signalR.HubConnection | null = null;
 
@@ -76,75 +78,55 @@ export class SignalRService {
   private registerHandlers(): void {
     if (!this.hubConnection) return;
 
+    const t = (key: string, params?: Record<string, string | number>) => this.translation.translate(key, params);
+
     this.hubConnection.on('reservationCreated', (reservation: Reservation) => {
-      console.log('[SignalR] Received reservationCreated:', reservation);
-      const currentUserId = this.authService.currentUser()?.userId;
-      const isOtherUser = reservation.createdBy !== currentUserId;
-
-      if (isOtherUser) {
-        this.notificationService.info(
-          `Another user created a reservation for ${reservation.guestName} (Room ${reservation.roomNumber})`,
-          'New Reservation'
-        );
+      const message = t('toast.guestRoom', { guest: reservation.guestName, room: reservation.roomNumber });
+      if (reservation.createdBy !== this.authService.currentUser()?.userId) {
+        this.notificationService.info(message, t('toast.newReservation'));
       } else {
-        this.notificationService.success(
-          `Reservation confirmed for ${reservation.guestName} (Room ${reservation.roomNumber})`,
-          'Reservation Created'
-        );
+        this.notificationService.success(message, t('toast.reservationCreated'));
       }
-
       this.reservationCreated$.next(reservation);
     });
 
     this.hubConnection.on('reservationUpdated', (event: ReservationUpdatedEvent) => {
       const r = event.reservation;
-      const message = `${r.guestName} · Room ${r.roomNumber} (#${r.id})`;
+      const message = t('toast.guestRoom', { guest: r.guestName, room: r.roomNumber });
       switch (event.action) {
         case 'Checked in':
-          this.notificationService.success(message, 'Guest Checked In');
+          this.notificationService.success(message, t('toast.checkedIn'));
           break;
         case 'Checked out':
-          this.notificationService.info(message, 'Guest Checked Out');
+          this.notificationService.info(message, t('toast.checkedOut'));
           break;
         case 'Payment':
-          this.notificationService.success(message, 'Payment Recorded');
+          this.notificationService.success(message, t('toast.payment'));
           break;
         case 'Cancelled':
-          this.notificationService.warning(message, 'Reservation Cancelled');
+          this.notificationService.warning(message, t('toast.cancelled'));
           break;
         case 'No-show':
-          this.notificationService.warning(message, 'Marked as No-Show');
+          this.notificationService.warning(message, t('toast.noShow'));
           break;
         default:
-          this.notificationService.info(message, 'Reservation Updated');
+          this.notificationService.info(message, t('toast.updated'));
       }
       this.reservationUpdated$.next(event);
     });
 
     this.hubConnection.on('roomCreated', (room: Room) => {
-      console.log('[SignalR] Received roomCreated:', room);
-      this.notificationService.info(
-        `Room ${room.roomNumber} (${room.roomType}) was added.`,
-        'Room Created'
-      );
+      this.notificationService.info(t('toast.roomLabel', { room: room.roomNumber }), t('toast.roomAdded'));
       this.roomCreated$.next(room);
     });
 
     this.hubConnection.on('roomUpdated', (room: Room) => {
-      console.log('[SignalR] Received roomUpdated:', room);
-      this.notificationService.info(
-        `Room ${room.roomNumber} was updated.`,
-        'Room Updated'
-      );
+      this.notificationService.info(t('toast.roomLabel', { room: room.roomNumber }), t('toast.roomChanged'));
       this.roomUpdated$.next(room);
     });
 
     this.hubConnection.on('roomDeleted', (roomId: number) => {
-      console.log('[SignalR] Received roomDeleted:', roomId);
-      this.notificationService.warning(
-        `Room #${roomId} was deleted.`,
-        'Room Deleted'
-      );
+      this.notificationService.warning(t('toast.roomRemoved'));
       this.roomDeleted$.next(roomId);
     });
   }

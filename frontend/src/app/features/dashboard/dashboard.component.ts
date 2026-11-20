@@ -8,13 +8,14 @@ import { AuthService } from '../../core/services/auth.service';
 import { DashboardStats, Reservation, TopRoomReport } from '../../core/models/models';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { DisplayDatePipe } from '../../shared/pipes/display-date.pipe';
 import { statusKey, statusVariant, todayIso } from '../../shared/reservation-status';
 import { UiBadgeComponent, UiButtonComponent, UiCardComponent, UiStatCardComponent } from '../../shared/components/ui';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, MoneyPipe, UiButtonComponent, UiCardComponent, UiStatCardComponent, UiBadgeComponent],
+  imports: [CommonModule, TranslatePipe, MoneyPipe, DisplayDatePipe, UiButtonComponent, UiCardComponent, UiStatCardComponent, UiBadgeComponent],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit, OnDestroy {

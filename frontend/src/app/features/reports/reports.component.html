@@ -61,7 +61,7 @@
   @if (activeTab === 'top-rooms') {
     <ui-card
       [title]="'reports.tabTopRooms' | translate"
-      subtitle="Top revenue generating hotel rooms ranked by bookings"
+      [subtitle]="'reports.topRoomsSubtitle' | translate"
       padding="none"
     >
       <div class="overflow-x-auto">
@@ -79,37 +79,16 @@
             @for (room of topRooms(); track room.roomNumber; let i = $index) {
               <tr class="data-table-row">
                 <td class="data-table-cell w-20">
-                  <span
-                    class="w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center border shadow-2xs"
-                    [class.bg-amber-100]="i === 0"
-                    [class.text-amber-800]="i === 0"
-                    [class.border-amber-300]="i === 0"
-                    [class.bg-slate-200]="i === 1"
-                    [class.text-slate-700]="i === 1"
-                    [class.border-slate-300]="i === 1"
-                    [class.bg-amber-50]="i === 2"
-                    [class.text-amber-900]="i === 2"
-                    [class.border-amber-200]="i === 2"
-                    [class.bg-slate-100]="i > 2"
-                    [class.text-slate-600]="i > 2"
-                    [class.border-slate-200]="i > 2"
-                  >
-                    @if (i === 0) { 🥇 }
-                    @else if (i === 1) { 🥈 }
-                    @else if (i === 2) { 🥉 }
-                    @else { #{{ i + 1 }} }
-                  </span>
+                  <span class="w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300">{{ i + 1 }}</span>
                 </td>
                 <td class="data-table-cell font-bold text-slate-900 dark:text-white w-56">
-                  {{ 'rooms.roomNumber' | translate }} {{ room.roomNumber }}
+                  {{ 'common.room' | translate }} {{ room.roomNumber }}
                 </td>
                 <td class="data-table-cell w-56">
-                  <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50">
-                    {{ room.roomType }}
-                  </span>
+                  <ui-badge [variant]="roomTypeVariant(room.roomType)" size="sm">{{ room.roomType }}</ui-badge>
                 </td>
                 <td class="data-table-cell font-medium text-slate-700 dark:text-slate-300 w-56">
-                  {{ room.reservationCount }} bookings
+                  {{ 'rooms.bookingsCount' | translate: { count: room.reservationCount } }}
                 </td>
                 <td class="data-table-cell text-end font-mono font-black text-emerald-600 dark:text-emerald-400 text-base">
                   {{ room.totalRevenue | money }}
@@ -166,9 +145,7 @@
             [label]="'reports.totalRevenue' | translate"
             [value]="revenueReport()?.totalRevenue | money"
             color="emerald"
-            trend="up"
-            trendValue="Revenue"
-            subtitle="Selected period earnings"
+            [subtitle]="'reports.periodRevenue' | translate"
           >
             <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -179,7 +156,7 @@
             [label]="'reports.totalBookings' | translate"
             [value]="revenueReport()?.totalReservations ?? 0"
             color="primary"
-            subtitle="Confirmed reservations"
+            [subtitle]="'reports.bookingsInPeriod' | translate"
           >
             <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -190,7 +167,7 @@
             [label]="'reports.totalNights' | translate"
             [value]="revenueReport()?.totalNights ?? 0"
             color="indigo"
-            subtitle="Room nights occupied"
+            [subtitle]="'reports.nightsOccupied' | translate"
           >
             <svg slot="icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
@@ -276,7 +253,7 @@
                 @for (row of occupancyReport(); track row.roomNumber) {
                   <tr class="data-table-row">
                     <td class="data-table-cell font-bold text-slate-900 dark:text-white w-48">
-                      {{ 'rooms.roomNumber' | translate }} {{ row.roomNumber }}
+                      {{ 'common.room' | translate }} {{ row.roomNumber }}
                     </td>
                     <td class="data-table-cell text-slate-600 dark:text-slate-300 w-56">{{ row.roomType }}</td>
                     <td class="data-table-cell font-medium text-slate-800 dark:text-slate-200 w-56">{{ row.bookedNights }}</td>

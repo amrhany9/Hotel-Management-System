@@ -41,6 +41,10 @@ export interface TranslationDictionary {
     active: string;
     inactive: string;
     id: string;
+    room: string;
+    activeFilters: string;
+    select: string;
+    noOptions: string;
   };
   auth: {
     signInTitle: string;
@@ -77,6 +81,7 @@ export interface TranslationDictionary {
     inHouse: string;
     paymentsThisMonth: string;
     outstandingBalance: string;
+    due: string;
     todaysMovements: string;
     nothingToday: string;
   };
@@ -105,6 +110,10 @@ export interface TranslationDictionary {
     enterRoomNumber: string;
     outOfService: string;
     adminOnly: string;
+    maxPricePlaceholder: string;
+    modalSubtitle: string;
+    availableHint: string;
+    bookingsCount: string;
   };
   reservations: {
     title: string;
@@ -223,6 +232,38 @@ export interface TranslationDictionary {
     frontDeskDesc: string;
     resetNote: string;
   };
+  toast: {
+    titleSuccess: string;
+    titleError: string;
+    titleInfo: string;
+    titleNotice: string;
+    loadFailed: string;
+    genericError: string;
+    enterCredentials: string;
+    invalidLogin: string;
+    welcome: string;
+    completeBooking: string;
+    checkoutAfterCheckin: string;
+    enterAmount: string;
+    completeFields: string;
+    roomCreated: string;
+    roomUpdated: string;
+    roomDeleted: string;
+    staffCreated: string;
+    guestRoom: string;
+    roomLabel: string;
+    newReservation: string;
+    reservationCreated: string;
+    checkedIn: string;
+    checkedOut: string;
+    payment: string;
+    cancelled: string;
+    noShow: string;
+    updated: string;
+    roomAdded: string;
+    roomChanged: string;
+    roomRemoved: string;
+  };
   reports: {
     title: string;
     subtitle: string;
@@ -238,6 +279,10 @@ export interface TranslationDictionary {
     rank: string;
     bookedNights: string;
     availableNights: string;
+    topRoomsSubtitle: string;
+    periodRevenue: string;
+    bookingsInPeriod: string;
+    nightsOccupied: string;
   };
   auditLogs: {
     title: string;
@@ -248,6 +293,20 @@ export interface TranslationDictionary {
     date: string;
     details: string;
     recentCount: string;
+    actCreated: string;
+    actUpdated: string;
+    actDeleted: string;
+    actCancelled: string;
+    actCheckedIn: string;
+    actCheckedOut: string;
+    actPayment: string;
+    actNoShow: string;
+    actActivated: string;
+    actDeactivated: string;
+    entReservation: string;
+    entRoom: string;
+    entUser: string;
+    entSystem: string;
   };
 }
 
@@ -295,6 +354,10 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       active: 'Active',
       inactive: 'Inactive',
       id: 'ID',
+      room: 'Room',
+      activeFilters: '{count} active',
+      select: 'Select...',
+      noOptions: 'No options found',
     },
     auth: {
       signInTitle: 'Hotel Management System',
@@ -329,8 +392,9 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       arrivalsToday: 'Arrivals Today',
       departuresToday: 'Departures Due',
       inHouse: 'Guests In-House',
-      paymentsThisMonth: 'Payments This Month',
+      paymentsThisMonth: 'Payments Received',
       outstandingBalance: 'Outstanding In-House',
+      due: 'due',
       todaysMovements: "Today's Arrivals & Departures",
       nothingToday: 'No arrivals or departures left today.',
     },
@@ -359,6 +423,10 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       enterRoomNumber: 'e.g. 101, 204',
       outOfService: 'Out of service',
       adminOnly: 'Only admins can add, edit or delete rooms.',
+      maxPricePlaceholder: 'e.g. 200',
+      modalSubtitle: 'Room number, type, nightly price and availability',
+      availableHint: 'Turn off to take the room out of service',
+      bookingsCount: '{count} bookings',
     },
     reservations: {
       title: 'Reservation Management',
@@ -477,12 +545,44 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       frontDeskDesc: 'Bookings, check-in/out and payments',
       resetNote: 'Demo data resets every night.',
     },
+    toast: {
+      titleSuccess: 'Done',
+      titleError: 'Error',
+      titleInfo: 'Update',
+      titleNotice: 'Notice',
+      loadFailed: 'Could not load the data. Refresh the page to try again.',
+      genericError: 'Something went wrong. Please try again.',
+      enterCredentials: 'Enter your email and password.',
+      invalidLogin: 'Invalid email or password.',
+      welcome: 'Welcome, {name}',
+      completeBooking: 'Fill in the guest name, phone, room and dates.',
+      checkoutAfterCheckin: 'Check-out date must be after check-in date.',
+      enterAmount: 'Enter a payment amount greater than zero.',
+      completeFields: 'Complete all required fields.',
+      roomCreated: 'Room {room} added',
+      roomUpdated: 'Room {room} updated',
+      roomDeleted: 'Room {room} deleted',
+      staffCreated: '{name} can now sign in',
+      guestRoom: '{guest} · Room {room}',
+      roomLabel: 'Room {room}',
+      newReservation: 'New Reservation',
+      reservationCreated: 'Reservation Created',
+      checkedIn: 'Guest Checked In',
+      checkedOut: 'Guest Checked Out',
+      payment: 'Payment Recorded',
+      cancelled: 'Reservation Cancelled',
+      noShow: 'Marked as No-Show',
+      updated: 'Reservation Updated',
+      roomAdded: 'Room Added',
+      roomChanged: 'Room Updated',
+      roomRemoved: 'Room Deleted',
+    },
     reports: {
       title: 'Performance & Analytics',
       subtitle: 'Revenue breakdown, top revenue generators, and occupancy trends',
-      tabTopRooms: 'Top Rooms (R1)',
-      tabRevenue: 'Revenue Analysis (R2)',
-      tabOccupancy: 'Occupancy Rates (R3)',
+      tabTopRooms: 'Top Rooms',
+      tabRevenue: 'Revenue',
+      tabOccupancy: 'Occupancy',
       revenueByRoomType: 'Revenue by Room Type',
       totalRevenue: 'Total Revenue',
       totalNights: 'Total Nights Sold',
@@ -492,6 +592,10 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       rank: 'Rank',
       bookedNights: 'Booked Nights',
       availableNights: 'Available Nights',
+      topRoomsSubtitle: 'Rooms ranked by bookings and revenue',
+      periodRevenue: 'For the selected dates',
+      bookingsInPeriod: 'Stays in the selected dates',
+      nightsOccupied: 'Room nights occupied',
     },
     auditLogs: {
       title: 'Activity Audit Trail',
@@ -502,6 +606,20 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       date: 'Timestamp',
       details: 'Audit Details',
       recentCount: 'Showing recent audit entries',
+      actCreated: 'Created',
+      actUpdated: 'Updated',
+      actDeleted: 'Deleted',
+      actCancelled: 'Cancelled',
+      actCheckedIn: 'Checked in',
+      actCheckedOut: 'Checked out',
+      actPayment: 'Payment',
+      actNoShow: 'No-show',
+      actActivated: 'Activated',
+      actDeactivated: 'Deactivated',
+      entReservation: 'Reservation',
+      entRoom: 'Room',
+      entUser: 'Staff account',
+      entSystem: 'System',
     },
   },
   ar: {
@@ -547,6 +665,10 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       active: 'نشط',
       inactive: 'غير نشط',
       id: 'المعرف',
+      room: 'غرفة',
+      activeFilters: '{count} نشط',
+      select: 'اختر...',
+      noOptions: 'لا توجد خيارات',
     },
     auth: {
       signInTitle: 'نظام إدارة الفنادق',
@@ -581,8 +703,9 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       arrivalsToday: 'الوصول اليوم',
       departuresToday: 'المغادرة المستحقة',
       inHouse: 'النزلاء المقيمون',
-      paymentsThisMonth: 'المدفوعات هذا الشهر',
+      paymentsThisMonth: 'المدفوعات المستلمة',
       outstandingBalance: 'المستحق على المقيمين',
+      due: 'مستحقة',
       todaysMovements: 'حركة الوصول والمغادرة اليوم',
       nothingToday: 'لا يوجد وصول أو مغادرة متبقية اليوم.',
     },
@@ -611,6 +734,10 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       enterRoomNumber: 'مثال: 101, 204',
       outOfService: 'خارج الخدمة',
       adminOnly: 'إضافة الغرف وتعديلها وحذفها متاحة للمسؤولين فقط.',
+      maxPricePlaceholder: 'مثال: 200',
+      modalSubtitle: 'رقم الغرفة ونوعها وسعر الليلة وحالة التوافر',
+      availableHint: 'أوقف التفعيل لإخراج الغرفة من الخدمة',
+      bookingsCount: '{count} حجوزات',
     },
     reservations: {
       title: 'إدارة الحجوزات',
@@ -729,12 +856,44 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       frontDeskDesc: 'الحجوزات والوصول والمغادرة والمدفوعات',
       resetNote: 'يتم إعادة ضبط البيانات التجريبية كل ليلة.',
     },
+    toast: {
+      titleSuccess: 'تم',
+      titleError: 'خطأ',
+      titleInfo: 'تحديث',
+      titleNotice: 'تنبيه',
+      loadFailed: 'تعذّر تحميل البيانات. حدّث الصفحة للمحاولة مرة أخرى.',
+      genericError: 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
+      enterCredentials: 'أدخل البريد الإلكتروني وكلمة المرور.',
+      invalidLogin: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+      welcome: 'مرحباً، {name}',
+      completeBooking: 'أكمل اسم النزيل ورقم الهاتف والغرفة والتواريخ.',
+      checkoutAfterCheckin: 'يجب أن يكون تاريخ المغادرة بعد تاريخ الوصول.',
+      enterAmount: 'أدخل مبلغ دفع أكبر من صفر.',
+      completeFields: 'أكمل جميع الحقول المطلوبة.',
+      roomCreated: 'تمت إضافة الغرفة {room}',
+      roomUpdated: 'تم تحديث الغرفة {room}',
+      roomDeleted: 'تم حذف الغرفة {room}',
+      staffCreated: 'يمكن لـ {name} تسجيل الدخول الآن',
+      guestRoom: '{guest} · غرفة {room}',
+      roomLabel: 'غرفة {room}',
+      newReservation: 'حجز جديد',
+      reservationCreated: 'تم إنشاء الحجز',
+      checkedIn: 'تم تسجيل وصول النزيل',
+      checkedOut: 'تم تسجيل مغادرة النزيل',
+      payment: 'تم تسجيل دفعة',
+      cancelled: 'تم إلغاء الحجز',
+      noShow: 'تم تسجيل عدم الحضور',
+      updated: 'تم تحديث الحجز',
+      roomAdded: 'تمت إضافة غرفة',
+      roomChanged: 'تم تحديث غرفة',
+      roomRemoved: 'تم حذف غرفة',
+    },
     reports: {
       title: 'التقارير ومؤشرات الأداء',
       subtitle: 'التحليل المالي، مصادر الإيرادات، ومعدلات الإشغال الفندقي',
-      tabTopRooms: 'أفضل الغرف (R1)',
-      tabRevenue: 'تحليل الإيرادات (R2)',
-      tabOccupancy: 'معدلات الإشغال (R3)',
+      tabTopRooms: 'أفضل الغرف',
+      tabRevenue: 'الإيرادات',
+      tabOccupancy: 'الإشغال',
       revenueByRoomType: 'الإيرادات حسب نوع الغرفة',
       totalRevenue: 'إجمالي الإيرادات',
       totalNights: 'إجمالي الليالي المباعة',
@@ -744,6 +903,10 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       rank: 'الترتيب',
       bookedNights: 'الليالي المحجوزة',
       availableNights: 'الليالي المتاحة',
+      topRoomsSubtitle: 'الغرف مرتبة حسب الحجوزات والإيرادات',
+      periodRevenue: 'للفترة المحددة',
+      bookingsInPeriod: 'الإقامات في الفترة المحددة',
+      nightsOccupied: 'الليالي المشغولة',
     },
     auditLogs: {
       title: 'سجل تدقيق الأنشطة',
@@ -754,6 +917,20 @@ export const TRANSLATIONS: Record<'en' | 'ar', TranslationDictionary> = {
       date: 'الوقت والتاريخ',
       details: 'تفاصيل العملية',
       recentCount: 'عرض أحدث سجلات التدقيق',
+      actCreated: 'إنشاء',
+      actUpdated: 'تعديل',
+      actDeleted: 'حذف',
+      actCancelled: 'إلغاء',
+      actCheckedIn: 'تسجيل وصول',
+      actCheckedOut: 'تسجيل مغادرة',
+      actPayment: 'دفعة',
+      actNoShow: 'عدم حضور',
+      actActivated: 'تفعيل',
+      actDeactivated: 'إيقاف',
+      entReservation: 'حجز',
+      entRoom: 'غرفة',
+      entUser: 'حساب موظف',
+      entSystem: 'النظام',
     },
   },
 };
