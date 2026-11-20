@@ -29,7 +29,7 @@
         <ui-combobox
           [label]="'rooms.roomType' | translate"
           [placeholder]="'rooms.allTypes' | translate"
-          [options]="roomTypeOptions"
+          [options]="roomTypeOptions()"
           [searchable]="false"
           [(value)]="filterType"
           (valueChange)="applyFilters()"
@@ -186,7 +186,7 @@
       <ui-combobox
         [label]="'rooms.roomType' | translate"
         labelStyle="normal"
-        [options]="roomTypeOptions"
+        [options]="roomTypeOptions()"
         [placeholder]="'rooms.roomType' | translate"
         [(value)]="modalRoomType"
         [required]="true"

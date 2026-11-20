@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -66,18 +66,33 @@ export class RoomsComponent implements OnInit, OnDestroy {
   editingRoomId: number | null = null;
   roomToDelete: Room | null = null;
 
-  modalRoomNumber = '';
-  modalRoomType = 'Single';
-  modalPrice = 100;
-  modalIsAvailable = true;
-
-  roomTypeOptions: ComboboxOption[] = [
+  private readonly standardRoomTypes: ComboboxOption[] = [
     { label: 'Standard', value: 'Standard', subtext: 'Queen bed, city view' },
     { label: 'Deluxe', value: 'Deluxe', subtext: 'King bed, Nile view' },
     { label: 'Junior Suite', value: 'Junior Suite', subtext: 'Bedroom with sitting area' },
     { label: 'Family Suite', value: 'Family Suite', subtext: 'Two bedrooms, sleeps four' },
     { label: 'Presidential Suite', value: 'Presidential Suite', subtext: 'Top floor, private terrace' },
   ];
+
+  private readonly defaultRoomType = this.standardRoomTypes[0].value;
+
+  roomTypeOptions = computed<ComboboxOption[]>(() => {
+    const known = new Set(this.standardRoomTypes.map((o) => o.value.toLowerCase()));
+    const extra: ComboboxOption[] = [];
+    for (const room of this.rooms()) {
+      const type = room.roomType?.trim();
+      if (type && !known.has(type.toLowerCase())) {
+        known.add(type.toLowerCase());
+        extra.push({ label: type, value: type });
+      }
+    }
+    return [...this.standardRoomTypes, ...extra];
+  });
+
+  modalRoomNumber = '';
+  modalRoomType = this.defaultRoomType;
+  modalPrice = 100;
+  modalIsAvailable = true;
 
   get activeFilterCount(): number {
     let count = 0;
@@ -156,7 +171,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
   openCreateModal(): void {
     this.editingRoomId = null;
     this.modalRoomNumber = '';
-    this.modalRoomType = 'Single';
+    this.modalRoomType = this.defaultRoomType;
     this.modalPrice = 100;
     this.modalIsAvailable = true;
     this.isModalOpen = true;
