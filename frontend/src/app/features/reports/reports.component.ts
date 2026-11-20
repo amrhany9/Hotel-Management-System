@@ -6,6 +6,7 @@ import { TopRoomReport, RevenueReport, OccupancyReportItem } from '../../core/mo
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { roomTypeVariant } from '../../shared/room-type';
+import { localIsoDate } from '../../shared/reservation-status';
 import {
   UiBadgeComponent,
   UiButtonComponent,
@@ -51,10 +52,10 @@ export class ReportsComponent implements OnInit {
     const start = new Date(today.getFullYear(), today.getMonth(), 1);
     const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-    this.revenueFrom = this.formatDate(start);
-    this.revenueTo = this.formatDate(end);
-    this.occupancyFrom = this.formatDate(start);
-    this.occupancyTo = this.formatDate(end);
+    this.revenueFrom = localIsoDate(start);
+    this.revenueTo = localIsoDate(end);
+    this.occupancyFrom = localIsoDate(start);
+    this.occupancyTo = localIsoDate(end);
 
     this.loadTopRooms();
     this.loadRevenueReport();
@@ -82,9 +83,5 @@ export class ReportsComponent implements OnInit {
       next: (data) => this.occupancyReport.set(data),
       error: (err) => console.error(err),
     });
-  }
-
-  private formatDate(d: Date): string {
-    return d.toISOString().split('T')[0];
   }
 }

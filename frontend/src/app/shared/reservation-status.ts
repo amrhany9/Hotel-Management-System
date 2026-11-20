@@ -19,8 +19,11 @@ export function statusVariant(status: ReservationStatus): BadgeVariant {
   return STATUS_META[status]?.variant ?? 'neutral';
 }
 
-export function todayIso(): string {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+export function localIsoDate(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
+}
+
+export function todayIso(): string {
+  return localIsoDate(new Date());
 }
